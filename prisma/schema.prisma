@@ -12,10 +12,31 @@ enum Role {
   ADMIN
 }
 
+enum PqrStatus {
+  PENDIENTE
+  EN_PROCESO
+  RESPONDIDA
+  CERRADA
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
   email    String @unique
   password String
   role     Role   @default(USER)
+  pqrs     PQR[]
+}
+
+model PQR {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String
+  status      PqrStatus @default(PENDIENTE)
+  response    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
 }

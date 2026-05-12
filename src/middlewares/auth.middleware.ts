@@ -1,12 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-
-export interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-  };
-}
+import type { AuthRequest } from "../interfaces/auth.interface.js";
 
 export const authMiddleware = (
   req: AuthRequest,
@@ -36,6 +30,7 @@ export const authMiddleware = (
     ) as {
       id: number;
       email: string;
+      role: string;
     };
 
     req.user = decoded;
