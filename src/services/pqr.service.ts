@@ -21,3 +21,16 @@ export const createPqrService = async ({
 
   return pqr;
 };
+
+export const getMyPqrsService = async (userId: number) => {
+  const pqrs = await prisma.pQR.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return pqrs;
+};
