@@ -192,7 +192,9 @@ El sistema permite:
 
 ---
 
-# 10. Creación del middleware JWT
+# 10. Creación de Middlewares
+
+## Middleware de Autenticación JWT
 
 ## Archivo creado
 
@@ -212,32 +214,36 @@ Funciones principales:
 - Denegar acceso no autorizado
 - Adjuntar usuario autenticado al request
 
----
+## Middleware de Roles ADMIN
 
-## Utilizacion en postma
+### Archivo creado
 
-```http
-Authorization: Bearer TOKEN
+```txt
+src/middlewares/role.middleware.ts
 ```
 
----
+## Descripción
 
-## Respuesta si no existe token
+Se creó un middleware encargado de validar que el usuario autenticado tenga permisos de administrador (`ADMIN`) antes de acceder a rutas protegidas.
 
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
-}
-```
+### Funcionalidades
 
----
+- Verificar que exista un usuario autenticado
+- Validar que el rol del usuario sea `ADMIN`
+- Denegar acceso a usuarios sin permisos
+- Permitir acceso a rutas administrativas
 
-## Respuesta si el token es inválido
+## Uso del middleware
 
-```json
-{
-  "message": "Token inválido o expirado."
-}
+Este middleware debe ejecutarse después de `authMiddleware`.
+
+```ts
+router.get(
+  "/admin",
+  authMiddleware,
+  adminMiddleware,
+  controlador
+);
 ```
 
 ---
@@ -298,259 +304,5 @@ El controlador actualmente realiza el siguiente proceso:
 4. Retornar únicamente información segura.
 5. Evitar exponer la contraseña.
 6. Manejar errores y accesos no autorizados.
-
----
-
-# 12. Endpoints funcionales
-
-Actualmente el backend cuenta con endpoints funcionales para validación, autenticación y manejo seguro de usuarios mediante JWT.
-
----
-
-## Health Check
-
-```http
-GET /api/health
-```
-
-### Descripción
-
-Endpoint utilizado para verificar el correcto funcionamiento de la API.
-
----
-
-### Respuesta exitosa
-
-```json
-{
-  "message": "API funcionando correctamente"
-}
-```
-
----
-
-# Obtener usuarios
-
-## Endpoint
-
-```http
-GET /api/users
-```
-
-### Descripción
-
-Endpoint encargado de obtener los usuarios registrados en la base de datos mediante Prisma ORM.
-
----
-
-### Respuesta exitosa
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Juan",
-    "email": "juan@gmail.com"
-  }
-]
-```
-
----
-
-# Registrar usuario
-
-## Endpoint
-
-```http
-POST /api/users/register
-```
-
-### Descripción
-
-Endpoint encargado del registro de nuevos usuarios.
-
-Funciones implementadas:
-
-- Validación de campos
-- Verificación de email existente
-- Encriptación de contraseña con bcrypt
-- Registro en MySQL mediante Prisma
-- Protección de contraseña en respuestas
-
----
-
-## Body
-
-```json
-{
-  "name": "Juan",
-  "email": "juan@gmail.com",
-  "password": "123456"
-}
-```
-
----
-
-## Respuesta exitosa
-
-```json
-{
-  "message": "Usuario registrado correctamente",
-  "user": {
-    "id": 1,
-    "name": "Juan",
-    "email": "juan@gmail.com"
-  }
-}
-```
-
----
-
-## Respuesta si el usuario ya existe
-
-```json
-{
-  "message": "El usuario ya existe"
-}
-```
-
----
-
-## Respuesta en caso de error
-
-```json
-{
-  "message": "Error al registrar usuario"
-}
-```
-
----
-
-# Login de usuario JWT
-
-## Endpoint
-
-```http
-POST /api/users/login
-```
-
-### Descripción
-
-Endpoint encargado de autenticar usuarios registrados mediante JWT.
-
-Funciones implementadas:
-
-- Validación de email
-- Validación de contraseña
-- Comparación segura con bcrypt
-- Generación de token JWT
-- Retorno del usuario autenticado
-- Protección de credenciales sensibles
-
----
-
-## Body
-
-```json
-{
-  "email": "juan@gmail.com",
-  "password": "123456"
-}
-```
-
----
-
-## Respuesta exitosa
-
-```json
-{
-  "message": "Login exitoso",
-  "token": "JWT_TOKEN",
-  "user": {
-    "id": 1,
-    "name": "Juan",
-    "email": "juan@gmail.com"
-  }
-}
-```
-
----
-
-## Respuesta credenciales inválidas
-
-```json
-{
-  "message": "Credenciales inválidas"
-}
-```
-
----
-
-## Respuesta en caso de error
-
-```json
-{
-  "message": "Error al iniciar sesión"
-}
-```
-
----
-
-# Perfil autenticado
-
-## Endpoint protegido
-
-```http
-GET /api/profile
-```
-
-### Descripción
-
-Endpoint privado encargado de obtener la información del usuario autenticado mediante token JWT.
-
-La ruta utiliza middleware JWT para restringir el acceso únicamente a usuarios autenticados.
-
----
-
-## Header requerido
-
-```http
-Authorization: Bearer TOKEN
-```
-
----
-
-## Respuesta exitosa
-
-```json
-{
-  "message": "Perfil obtenido correctamente.",
-  "user": {
-    "id": 5,
-    "name": "Marlon",
-    "email": "marlon@gmail.com"
-  }
-}
-```
-
----
-
-## Respuesta sin token
-
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
-}
-```
-
----
-
-## Respuesta token inválido
-
-```json
-{
-  "message": "Token inválido o expirado."
-}
-```
 
 ---

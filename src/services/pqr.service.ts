@@ -34,3 +34,23 @@ export const getMyPqrsService = async (userId: number) => {
 
   return pqrs;
 };
+
+export const getAllPqrsService = async () => {
+  const pqrs = await prisma.pQR.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  return pqrs;
+};

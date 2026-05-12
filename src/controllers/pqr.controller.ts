@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import { createPqrService, getMyPqrsService } from "../services/pqr.service.js";
+import { createPqrService, getMyPqrsService, getAllPqrsService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 
 export const createPqr = async (
@@ -59,6 +59,25 @@ export const getMyPqrs = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al obtener las PQR",
+      error,
+    });
+  }
+};
+
+export const getAllPqrs = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const pqrs = await getAllPqrsService();
+
+    return res.json({
+      message: "Todas las PQR obtenidas correctamente",
+      pqrs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al obtener todas las PQR",
       error,
     });
   }
