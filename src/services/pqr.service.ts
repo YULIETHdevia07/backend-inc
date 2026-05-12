@@ -1,10 +1,5 @@
 import prisma from "../../prisma/client.js";
-
-interface CreatePqrData {
-  title: string;
-  description: string;
-  userId: number;
-}
+import type { CreatePqrData, PqrStatus } from "../interfaces/pqr.interface.js";
 
 export const createPqrService = async ({
   title,
@@ -35,6 +30,8 @@ export const getMyPqrsService = async (userId: number) => {
   return pqrs;
 };
 
+// Admin
+
 export const getAllPqrsService = async () => {
   const pqrs = await prisma.pQR.findMany({
     orderBy: {
@@ -53,4 +50,37 @@ export const getAllPqrsService = async () => {
   });
 
   return pqrs;
+};
+
+export const updatePqrStatusService = async (
+  id: number,
+  status: PqrStatus
+) => {
+  const pqr = await prisma.pQR.update({
+    where: {
+      id,
+    },
+    data: {
+      status,
+    },
+  });
+
+  return pqr;
+};
+
+export const respondPqrService = async (
+  id: number,
+  response: string
+) => {
+  const pqr = await prisma.pQR.update({
+    where: {
+      id,
+    },
+    data: {
+      response,
+      status: "RESPONDIDA",
+    },
+  });
+
+  return pqr;
 };

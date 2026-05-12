@@ -1,6 +1,7 @@
 import type { Response } from "express";
-import { createPqrService, getMyPqrsService, getAllPqrsService } from "../services/pqr.service.js";
+import { createPqrService, getMyPqrsService, getAllPqrsService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
+import type { PqrStatus } from "../interfaces/pqr.interface.js";
 
 export const createPqr = async (
   req: AuthRequest,
@@ -64,6 +65,8 @@ export const getMyPqrs = async (
   }
 };
 
+// Admin
+
 export const getAllPqrs = async (
   req: AuthRequest,
   res: Response
@@ -78,6 +81,82 @@ export const getAllPqrs = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al obtener todas las PQR",
+      error,
+    });
+  }
+};
+
+export const updatePqrStatus = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatus: PqrStatus[] = [
+      "PENDIENTE",
+      "EN_PROCESO",
+      "RESPONDIDA",
+      "CERRADA",
+    ];
+
+    if (!status) {
+      return res.status(400).json({
+        message: "El estado es obligatorio",
+      });
+    }
+
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({
+        message: "Estado no válido",
+        allowedStatus,
+      });
+    }
+
+    const pqr = await updatePqrStatusService(
+      Number(id),
+      status
+    );
+
+    return res.json({
+      message: "Estado de la PQR actualizado correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al actualizar el estado de la PQR",
+      error,
+    });
+  }
+};
+
+export const respondPqr = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { response } = req.body;
+
+    if (!response) {
+      return res.status(400).json({
+        message: "La respuesta es obligatoria",
+      });
+    }
+
+    const pqr = await respondPqrService(
+      Number(id),
+      response
+    );
+
+    return res.json({
+      message: "PQR respondida correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al responder la PQR",
       error,
     });
   }

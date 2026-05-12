@@ -362,3 +362,315 @@ Authorization: Bearer TOKEN
 ```
 
 ---
+
+# Obtener todas las PQR
+
+## Endpoint protegido para ADMIN
+
+```http
+GET /api/pqrs
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener todas las PQR registradas en el sistema.
+
+Esta ruta está protegida por autenticación JWT y validación de rol, por lo tanto, solo puede ser utilizada por usuarios con rol `ADMIN`.
+
+El administrador podrá visualizar todas las solicitudes creadas por los usuarios, incluyendo la información básica del usuario que creó cada PQR.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Todas las PQR obtenidas correctamente",
+  "pqrs": [
+    {
+      "id": 1,
+      "title": "Solicitud de prueba",
+      "description": "Esta es una PQR creada desde Postman.",
+      "status": "PENDIENTE",
+      "response": null,
+      "createdAt": "2026-05-12T00:00:00.000Z",
+      "updatedAt": "2026-05-12T00:00:00.000Z",
+      "userId": 1,
+      "user": {
+        "id": 1,
+        "name": "Juan",
+        "email": "juan@gmail.com",
+        "role": "USER"
+      }
+    }...
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta si no hay token
+
+```json
+{
+  "message": "Acceso denegado. Token no proporcionado."
+}
+```
+
+---
+
+# Cambiar estado de una PQR
+
+## Endpoint protegido para ADMIN
+
+```http
+PATCH /api/pqrs/:id/status
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/status
+```
+
+## Descripción
+
+Endpoint privado encargado de cambiar el estado de una PQR existente.
+
+Esta funcionalidad solo puede ser ejecutada por un usuario con rol `ADMIN`.
+
+Permite actualizar el seguimiento de una solicitud según el proceso de atención.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador de la PQR que se desea actualizar |
+
+---
+
+## Estados permitidos
+
+- PENDIENTE
+- EN_PROCESO
+- RESPONDIDA
+- CERRADA
+
+---
+
+## Body
+
+```json
+{
+  "status": "EN_PROCESO"
+}
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Estado de la PQR actualizado correctamente",
+  "pqr": {
+    "id": 1,
+    "title": "Solicitud de prueba",
+    "description": "Esta es una PQR creada desde Postman.",
+    "status": "EN_PROCESO",
+    "response": null,
+    "createdAt": "2026-05-12T00:00:00.000Z",
+    "updatedAt": "2026-05-12T00:00:00.000Z",
+    "userId": 1
+  }
+}
+```
+
+---
+
+## Respuesta si no se envía estado
+
+```json
+{
+  "message": "El estado es obligatorio"
+}
+```
+
+---
+
+## Respuesta si el estado no es válido
+
+```json
+{
+  "message": "Estado no válido",
+  "allowedStatus": [
+    "PENDIENTE",
+    "EN_PROCESO",
+    "RESPONDIDA",
+    "CERRADA"
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+# Responder una PQR
+
+## Endpoint protegido para ADMIN
+
+```http
+PATCH /api/pqrs/:id/respond
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/respond
+```
+
+## Descripción
+
+Endpoint privado encargado de permitir que el administrador responda una PQR.
+
+Cuando el administrador responde una PQR, el sistema guarda la respuesta en el campo `response` y cambia automáticamente el estado de la solicitud a `RESPONDIDA`.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador de la PQR que se desea responder |
+
+---
+
+## Body
+
+```json
+{
+  "response": "Su solicitud fue revisada. Se realizará el seguimiento correspondiente desde el área encargada."
+}
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "PQR respondida correctamente",
+  "pqr": {
+    "id": 1,
+    "title": "Solicitud de prueba",
+    "description": "Esta es una PQR creada desde Postman.",
+    "status": "RESPONDIDA",
+    "response": "Su solicitud fue revisada. Se realizará el seguimiento correspondiente desde el área encargada.",
+    "createdAt": "2026-05-12T00:00:00.000Z",
+    "updatedAt": "2026-05-12T00:00:00.000Z",
+    "userId": 1
+  }
+}
+```
+
+---
+
+## Respuesta si no se envía respuesta
+
+```json
+{
+  "message": "La respuesta es obligatoria"
+}
+```
+
+---
+
+## Respuesta si el usuario no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+# Resumen actualizado de endpoints funcionales
+
+| Método | Endpoint | Descripción | Acceso |
+|---|---|---|---|
+| GET | /api/health | Verifica el funcionamiento de la API | Público |
+| GET | /api/users | Obtiene los usuarios registrados | Según configuración |
+| POST | /api/users/register | Registra un nuevo usuario | Público |
+| POST | /api/users/login | Inicia sesión y genera token JWT | Público |
+| GET | /api/profile | Obtiene el perfil del usuario autenticado | Usuario autenticado |
+| POST | /api/pqrs | Crea una nueva PQR | USER / ADMIN |
+| GET | /api/pqrs/my | Obtiene las PQR del usuario autenticado | USER / ADMIN |
+| GET | /api/pqrs | Obtiene todas las PQR del sistema | ADMIN |
+| PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
+| PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
