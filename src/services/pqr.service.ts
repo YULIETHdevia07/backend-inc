@@ -30,6 +30,16 @@ export const getMyPqrsService = async (userId: number) => {
   return pqrs;
 };
 
+export const getPqrByIdService = async (id: number) => {
+  const pqr = await prisma.pQR.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  return pqr;
+};
+
 // Admin
 
 export const getAllPqrsService = async () => {

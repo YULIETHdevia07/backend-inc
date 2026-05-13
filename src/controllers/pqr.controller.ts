@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import { createPqrService, getMyPqrsService, getAllPqrsService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
+import { createPqrService, getMyPqrsService, getAllPqrsService, getPqrByIdService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 import type { PqrStatus } from "../interfaces/pqr.interface.js";
 
@@ -94,6 +94,14 @@ export const updatePqrStatus = async (
     const { id } = req.params;
     const { status } = req.body;
 
+    const pqrId = Number(id);
+
+    if (Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
     const allowedStatus: PqrStatus[] = [
       "PENDIENTE",
       "EN_PROCESO",
@@ -114,8 +122,16 @@ export const updatePqrStatus = async (
       });
     }
 
+    const existingPqr = await getPqrByIdService(pqrId);
+
+    if (!existingPqr) {
+      return res.status(404).json({
+        message: "La PQR no existe",
+      });
+    }
+
     const pqr = await updatePqrStatusService(
-      Number(id),
+      pqrId,
       status
     );
 
@@ -139,15 +155,31 @@ export const respondPqr = async (
     const { id } = req.params;
     const { response } = req.body;
 
-    if (!response) {
+    const pqrId = Number(id);
+
+    if (Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    if (!response || response.trim() === "") {
       return res.status(400).json({
         message: "La respuesta es obligatoria",
       });
     }
 
+    const existingPqr = await getPqrByIdService(pqrId);
+
+    if (!existingPqr) {
+      return res.status(404).json({
+        message: "La PQR no existe",
+      });
+    }
+
     const pqr = await respondPqrService(
-      Number(id),
-      response
+      pqrId,
+      response.trim()
     );
 
     return res.json({

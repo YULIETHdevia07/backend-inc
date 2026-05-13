@@ -461,9 +461,18 @@ PATCH /api/pqrs/1/status
 
 Endpoint privado encargado de cambiar el estado de una PQR existente.
 
-Esta funcionalidad solo puede ser ejecutada por un usuario con rol `ADMIN`.
+Esta ruta solo puede ser utilizada por usuarios autenticados con rol `ADMIN`.
 
 Permite actualizar el seguimiento de una solicitud según el proceso de atención.
+
+Funcionamiento interno:
+
+- Obtiene el id desde los parámetros de la URL.
+- Convierte el id a número.
+- Valida que el id sea válido.
+- Verifica que el estado enviado esté dentro de los estados permitidos.
+- Consulta si la PQR existe en la base de datos.
+  Si existe, actualiza el estado de la PQR.
 
 ---
 
@@ -529,11 +538,31 @@ Content-Type: application/json
 
 ---
 
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
 ## Respuesta si no se envía estado
 
 ```json
 {
   "message": "El estado es obligatorio"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
 }
 ```
 
@@ -584,6 +613,19 @@ PATCH /api/pqrs/1/respond
 Endpoint privado encargado de permitir que el administrador responda una PQR.
 
 Cuando el administrador responde una PQR, el sistema guarda la respuesta en el campo `response` y cambia automáticamente el estado de la solicitud a `RESPONDIDA`.
+
+Esta ruta solo puede ser utilizada por usuarios autenticados con rol `ADMIN`.
+
+Funcionamiento interno:
+
+- Obtiene el id desde los parámetros de la URL.
+- Convierte el id a número.
+- Valida que el id sea válido.
+- Valida que el campo response no esté vacío.
+- Valida que la respuesta no contenga únicamente espacios.
+- Consulta si la PQR existe en la base de datos.
+  Si existe, guarda la respuesta limpia.
+- Cambia automáticamente el estado de la PQR a RESPONDIDA.
 
 ---
 
@@ -640,6 +682,16 @@ Content-Type: application/json
 
 ---
 
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
 ## Respuesta si no se envía respuesta
 
 ```json
@@ -650,11 +702,31 @@ Content-Type: application/json
 
 ---
 
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
 ## Respuesta si el usuario no es ADMIN
 
 ```json
 {
   "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
 }
 ```
 
