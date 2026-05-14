@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import { createPqrService, getMyPqrsService, getAllPqrsService, getPqrByIdService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
-import { PqrStatus } from "@prisma/client";
+import { PqrStatus, PqrCaseType } from "@prisma/client";
 
 export const createPqr = async (
   req: AuthRequest,
@@ -10,9 +10,23 @@ export const createPqr = async (
   try {
     const { caseType, description } = req.body;
 
+    const allowedCaseTypes: PqrCaseType[] = [
+      "SAP",
+      "DANO_EQUIPO",
+      "INSTALACION",
+      "OTRO",
+    ];
+
     if (!caseType || !description) {
       return res.status(400).json({
-        message: "El título y la descripción son obligatorios",
+        message: "El tipo de caso y la descripción son obligatorios",
+      });
+    }
+
+    if (!allowedCaseTypes.includes(caseType)) {
+      return res.status(400).json({
+        message: "Tipo de caso no válido",
+        allowedCaseTypes,
       });
     }
 
@@ -24,7 +38,8 @@ export const createPqr = async (
 
     if (description.length > 500) {
       return res.status(400).json({
-        message: "La descripción no puede superar los 500 caracteres",
+        message:
+          "La descripción no puede superar los 500 caracteres",
       });
     }
 

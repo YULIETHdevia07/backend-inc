@@ -318,6 +318,32 @@ OTRO
 
 ---
 
+## Respuesta si `caseType` y `description` no son enviados
+
+```json
+{
+  "message": "El tipo de caso y la descripción son obligatorios"
+}
+```
+
+---
+
+## Respuesta si el `caseType` no es válido
+
+```json
+{
+  "message": "Tipo de caso no válido",
+  "allowedCaseTypes": [
+    "SAP",
+    "DANO_EQUIPO",
+    "INSTALACION",
+    "OTRO"
+  ]
+}
+```
+
+---
+
 ## Respuesta si la descripción supera los 500 caracteres
 
 ```json
