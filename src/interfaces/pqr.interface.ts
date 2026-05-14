@@ -1,11 +1,8 @@
+import { PqrCaseType } from "@prisma/client";
+
 export interface CreatePqrData {
-  title: string;
+  caseType: PqrCaseType;
   description: string;
   userId: number;
 }
 
-export type PqrStatus =
-  | "PENDIENTE"
-  | "EN_PROCESO"
-  | "RESPONDIDA"
-  | "CERRADA";

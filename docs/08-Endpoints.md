@@ -280,9 +280,20 @@ Authorization: Bearer TOKEN
 
 ```json
 {
-  "title": "Solicitud de prueba",
+   "caseType": "SAP",
   "description": "Esta es una PQR creada desde Postman para probar el módulo."
 }
+```
+
+---
+
+# Tipos de caso disponibles
+
+```txt
+SAP
+DANO_EQUIPO
+INSTALACION
+OTRO
 ```
 
 ---
@@ -294,7 +305,7 @@ Authorization: Bearer TOKEN
   "message": "PQR creada correctamente",
   "pqr": {
     "id": 1,
-    "title": "Solicitud de prueba",
+    "caseType": "SAP",
     "description": "Esta es una PQR creada desde Postman para probar el módulo.",
     "status": "PENDIENTE",
     "response": null,
@@ -302,6 +313,16 @@ Authorization: Bearer TOKEN
     "updatedAt": "2026-05-12T00:00:00.000Z",
     "userId": 1
   }
+}
+```
+
+---
+
+## Respuesta si la descripción supera los 500 caracteres
+
+```json
+{
+  "message": "La respuesta no puede superar los 500 caracteres"
 }
 ```
 
@@ -669,7 +690,7 @@ Content-Type: application/json
   "message": "PQR respondida correctamente",
   "pqr": {
     "id": 1,
-    "title": "Solicitud de prueba",
+    "caseType": "SAP",
     "description": "Esta es una PQR creada desde Postman.",
     "status": "RESPONDIDA",
     "response": "Su solicitud fue revisada. Se realizará el seguimiento correspondiente desde el área encargada.",
@@ -727,6 +748,16 @@ Content-Type: application/json
 ```json
 {
   "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la descripción supera los 500 caracteres
+
+```json
+{
+  "message": "La respuesta no puede superar los 500 caracteres"
 }
 ```
 

@@ -1,14 +1,15 @@
 import prisma from "../../prisma/client.js";
-import type { CreatePqrData, PqrStatus } from "../interfaces/pqr.interface.js";
+import type { CreatePqrData } from "../interfaces/pqr.interface.js";
+import { PqrStatus } from "@prisma/client";
 
 export const createPqrService = async ({
-  title,
+  caseType,
   description,
   userId,
 }: CreatePqrData) => {
   const pqr = await prisma.pQR.create({
     data: {
-      title,
+      caseType,
       description,
       userId,
     },
@@ -88,7 +89,6 @@ export const respondPqrService = async (
     },
     data: {
       response,
-      status: "RESPONDIDA",
     },
   });
 

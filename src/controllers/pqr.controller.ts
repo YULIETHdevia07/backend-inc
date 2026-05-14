@@ -1,16 +1,16 @@
 import type { Response } from "express";
 import { createPqrService, getMyPqrsService, getAllPqrsService, getPqrByIdService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
-import type { PqrStatus } from "../interfaces/pqr.interface.js";
+import { PqrStatus } from "@prisma/client";
 
 export const createPqr = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
-    const { title, description } = req.body;
+    const { caseType, description } = req.body;
 
-    if (!title || !description) {
+    if (!caseType || !description) {
       return res.status(400).json({
         message: "El título y la descripción son obligatorios",
       });
@@ -22,8 +22,14 @@ export const createPqr = async (
       });
     }
 
+    if (description.length > 500) {
+      return res.status(400).json({
+        message: "La descripción no puede superar los 500 caracteres",
+      });
+    }
+
     const pqr = await createPqrService({
-      title,
+      caseType,
       description,
       userId: req.user.id,
     });
@@ -166,6 +172,12 @@ export const respondPqr = async (
     if (!response || response.trim() === "") {
       return res.status(400).json({
         message: "La respuesta es obligatoria",
+      });
+    }
+
+    if (response.length > 500) {
+      return res.status(400).json({
+        message: "La respuesta no puede superar los 500 caracteres",
       });
     }
 
