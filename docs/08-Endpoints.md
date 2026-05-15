@@ -26,34 +26,6 @@ Endpoint utilizado para verificar el correcto funcionamiento de la API.
 
 ---
 
-# Obtener usuarios
-
-## Endpoint
-
-```http
-GET /api/users
-```
-
-### Descripción
-
-Endpoint encargado de obtener los usuarios registrados en la base de datos mediante Prisma ORM.
-
----
-
-### Respuesta exitosa
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Juan",
-    "email": "juan@gmail.com"
-  }
-]
-```
-
----
-
 # Registrar usuario
 
 ## Endpoint
@@ -118,6 +90,253 @@ Funciones implementadas:
 ```json
 {
   "message": "Error al registrar usuario"
+}
+```
+
+---
+
+# Obtener usuarios
+
+## Endpoint protegido para ADMIN
+
+```http
+GET /api/users
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener todos los usuarios registrados en el sistema.
+
+Esta ruta permite al administrador visualizar los usuarios existentes y sus roles actuales.
+
+Por seguridad, la respuesta no debe incluir la contraseña del usuario.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Usuarios obtenidos correctamente",
+  "users": [
+    {
+      "id": 1,
+      "name": "Juan",
+      "email": "juan@gmail.com",
+      "role": "USER"
+    },
+    {
+      "id": 2,
+      "name": "Carlos",
+      "email": "carlos@gmail.com",
+      "role": "AGENT"
+    },
+    {
+      "id": 3,
+      "name": "Admin",
+      "email": "admin@gmail.com",
+      "role": "ADMIN"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario autenticado no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta si no hay token
+
+```json
+{
+  "message": "Acceso denegado. Token no proporcionado."
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener los usuarios"
+}
+```
+
+---
+
+# Cambiar rol de usuario
+
+## Endpoint protegido para ADMIN
+
+```http
+PATCH /api/users/:id/role
+```
+
+## Ejemplo
+
+```http
+PATCH /api/users/2/role
+```
+
+## Descripción
+
+Endpoint privado encargado de cambiar el rol de un usuario registrado en el sistema.
+
+Esta ruta solo puede ser utilizada por usuarios autenticados con rol `ADMIN`.
+
+Permite asignar roles según la función que tendrá cada usuario dentro del sistema.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador del usuario al que se le desea cambiar el rol |
+
+---
+
+## Roles permitidos
+
+- USER
+- ADMIN
+- AGENT
+
+---
+
+## Body
+
+```json
+{
+  "role": "AGENT"
+}
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Rol del usuario actualizado correctamente",
+  "user": {
+    "id": 2,
+    "name": "Carlos",
+    "email": "carlos@gmail.com",
+    "role": "AGENT"
+  }
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id del usuario no es válido"
+}
+```
+
+---
+
+## Respuesta si no se envía el rol
+
+```json
+{
+  "message": "El rol es obligatorio"
+}
+```
+
+---
+
+## Respuesta si el rol no es válido
+
+```json
+{
+  "message": "Rol no válido",
+  "allowedRoles": [
+    "USER",
+    "ADMIN",
+    "AGENT"
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no existe
+
+```json
+{
+  "message": "El usuario no existe"
+}
+```
+
+---
+
+## Respuesta si el usuario autenticado no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al actualizar el rol del usuario"
 }
 ```
 
@@ -225,7 +444,8 @@ Authorization: Bearer TOKEN
   "user": {
     "id": 5,
     "name": "Marlon",
-    "email": "marlon@gmail.com"
+    "email": "marlon@gmail.com",
+    "role": "USER"
   }
 }
 ```
@@ -794,7 +1014,7 @@ Content-Type: application/json
 | Método | Endpoint | Descripción | Acceso |
 |---|---|---|---|
 | GET | /api/health | Verifica el funcionamiento de la API | Público |
-| GET | /api/users | Obtiene los usuarios registrados | Según configuración |
+| GET | /api/users | Obtiene todos los usuarios registrados | ADMIN |
 | POST | /api/users/register | Registra un nuevo usuario | Público |
 | POST | /api/users/login | Inicia sesión y genera token JWT | Público |
 | GET | /api/profile | Obtiene el perfil del usuario autenticado | Usuario autenticado |
@@ -803,3 +1023,4 @@ Content-Type: application/json
 | GET | /api/pqrs | Obtiene todas las PQR del sistema | ADMIN |
 | PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
 | PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
+| PATCH | /api/users/:id/role | Cambia el rol de un usuario | ADMIN |

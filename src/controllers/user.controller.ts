@@ -1,3 +1,4 @@
+import { getAllUsersService, getUserByIdService, updateUserRoleService } from "../services/user.service.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -7,9 +8,20 @@ export const getUsers = async (
   req: Request,
   res: Response
 ) => {
-  const users = await prisma.user.findMany();
 
-  return res.json(users);
+  try {
+    const users = await getAllUsersService();
+
+    return res.status(200).json({
+      message: "Usuarios obtenidos correctamente",
+      users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al obtener los usuarios",
+    });
+  }
+
 };
 
 export const registerUser = async (
@@ -119,6 +131,59 @@ export const loginUser = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error en el login",
+      error,
+    });
+  }
+};
+
+export const updateUserRole = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const userId = Number(id);
+
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        message: "El id del usuario no es válido",
+      });
+    }
+
+    if (!role) {
+      return res.status(400).json({
+        message: "El rol es obligatorio",
+      });
+    }
+
+    const allowedRoles = ["USER", "ADMIN", "AGENT"];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        message: "Rol no válido",
+        allowedRoles,
+      });
+    }
+
+    const userExists = await getUserByIdService(userId);
+
+    if (!userExists) {
+      return res.status(404).json({
+        message: "El usuario no existe",
+      });
+    }
+
+    const updatedUser = await updateUserRoleService(userId,role);
+
+    return res.status(200).json({
+      message: "Rol del usuario actualizado correctamente",
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al actualizar el rol del usuario",
       error,
     });
   }

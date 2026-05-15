@@ -23,6 +23,7 @@ export const getProfile = async (
         id: true,
         name: true,
         email: true,
+        role: true,
       },
     });
 
