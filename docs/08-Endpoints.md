@@ -1009,6 +1009,355 @@ Content-Type: application/json
 
 ---
 
+# Obtener PQR disponibles para AGENT
+
+## Endpoint protegido para ADMIN / AGENT
+
+```http
+GET /api/pqrs/available
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener las PQR que aún no tienen responsable asignado.
+
+Esta ruta permite que los usuarios con rol `AGENT` consulten las solicitudes disponibles para ser tomadas y atendidas.
+
+Una PQR disponible debe cumplir con las siguientes condiciones:
+
+- No tener responsable asignado
+- Tener el campo `assignedToId` en `null`
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_AGENT
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+- AGENT
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "PQR disponibles obtenidas correctamente",
+  "pqrs": [
+    {
+      "id": 1,
+      "caseType": "SAP",
+      "description": "No puedo ingresar al sistema.",
+      "status": "PENDIENTE",
+      "response": null,
+      "createdAt": "2026-05-19T00:00:00.000Z",
+      "updatedAt": "2026-05-19T00:00:00.000Z",
+      "userId": 3,
+      "assignedToId": null,
+      "user": {
+        "id": 3,
+        "name": "Juan",
+        "email": "juan@gmail.com",
+        "role": "USER"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permisos
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta si no hay token
+
+```json
+{
+  "message": "Acceso denegado. Token no proporcionado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener las PQR disponibles"
+}
+```
+
+---
+
+# Tomar una PQR disponible
+
+## Endpoint protegido para ADMIN / AGENT
+
+```http
+PATCH /api/pqrs/:id/take
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/take
+```
+
+## Descripción
+
+Endpoint privado encargado de permitir que un usuario con rol `AGENT` tome una PQR disponible para atenderla.
+
+Cuando el agente toma una PQR, el sistema guarda el id del usuario autenticado en el campo `assignedToId`.
+
+Este endpoint no requiere body, porque el usuario responsable se obtiene desde el token JWT.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_AGENT
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+- AGENT
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador de la PQR que el agente desea tomar |
+
+---
+
+## Body
+
+```json
+No requiere body
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "PQR tomada correctamente",
+  "pqr": {
+    "id": 1,
+    "caseType": "SAP",
+    "description": "No puedo ingresar al sistema.",
+    "status": "EN_PROCESO",
+    "response": null,
+    "createdAt": "2026-05-19T00:00:00.000Z",
+    "updatedAt": "2026-05-19T00:00:00.000Z",
+    "userId": 3,
+    "assignedToId": 5,
+    "user": {
+      "id": 3,
+      "name": "Juan",
+      "email": "juan@gmail.com",
+      "role": "USER"
+    },
+    "assignedTo": {
+      "id": 5,
+      "name": "Carlos Agente",
+      "email": "carlos@gmail.com",
+      "role": "AGENT"
+    }
+  }
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la PQR ya fue tomada
+
+```json
+{
+  "message": "Esta PQR ya fue tomada por otro agente"
+}
+```
+
+---
+
+## Respuesta si la PQR ya la tiene asignada
+
+```json
+{
+  "message": "Esta PQR ya está asignada a ti"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permisos
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al tomar la PQR"
+}
+```
+
+---
+
+# Obtener PQR asignadas al AGENT autenticado
+
+## Endpoint protegido para ADMIN / AGENT
+
+```http
+GET /api/pqrs/assigned/my
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener las PQR que fueron tomadas o asignadas al usuario autenticado.
+
+Esta ruta permite que un usuario con rol `AGENT` consulte únicamente las PQR que tiene bajo su responsabilidad.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_AGENT
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+- AGENT
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "PQR asignadas obtenidas correctamente",
+  "pqrs": [
+    {
+      "id": 1,
+      "caseType": "SAP",
+      "description": "No puedo ingresar al sistema.",
+      "status": "EN_PROCESO",
+      "response": null,
+      "createdAt": "2026-05-19T00:00:00.000Z",
+      "updatedAt": "2026-05-19T00:00:00.000Z",
+      "userId": 3,
+      "assignedToId": 5,
+      "user": {
+        "id": 3,
+        "name": "Juan",
+        "email": "juan@gmail.com",
+        "role": "USER"
+      },
+      "assignedTo": {
+        "id": 5,
+        "name": "Carlos Agente",
+        "email": "carlos@gmail.com",
+        "role": "AGENT"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permisos
+
+```json
+{
+  "message": "No tienes permisos para acceder a este recurso"
+}
+```
+
+---
+
+## Respuesta si no hay token
+
+```json
+{
+  "message": "Acceso denegado. Token no proporcionado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener las PQR asignadas"
+}
+```
+
+---
+
 # Resumen actualizado de endpoints funcionales
 
 | Método | Endpoint | Descripción | Acceso |
@@ -1021,6 +1370,11 @@ Content-Type: application/json
 | POST | /api/pqrs | Crea una nueva PQR | USER / ADMIN |
 | GET | /api/pqrs/my | Obtiene las PQR del usuario autenticado | USER / ADMIN |
 | GET | /api/pqrs | Obtiene todas las PQR del sistema | ADMIN |
+| GET | /api/pqrs/available | Obtiene las PQR pendientes sin responsable | ADMIN / AGENT |
+| GET | /api/pqrs/assigned/my | Obtiene las PQR asignadas al AGENT autenticado | ADMIN / AGENT |
+| PATCH | /api/pqrs/:id/take | Permite que un AGENT tome una PQR disponible | ADMIN / AGENT |
 | PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
 | PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
 | PATCH | /api/users/:id/role | Cambia el rol de un usuario | ADMIN |
+
+---

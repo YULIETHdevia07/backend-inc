@@ -2,6 +2,12 @@ import type { Response } from "express";
 import { createPqrService, getMyPqrsService, getAllPqrsService, getPqrByIdService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 import { PqrStatus, PqrCaseType } from "@prisma/client";
+import {
+  getAvailablePqrsService,
+  getMyAssignedPqrsService,
+  takePqrService,
+  getPqrWithAssignedService,
+} from "../services/pqr.service.js";
 
 export const createPqr = async (
   req: AuthRequest,
@@ -217,6 +223,114 @@ export const respondPqr = async (
     return res.status(500).json({
       message: "Error al responder la PQR",
       error,
+    });
+  }
+};
+
+// Obtiene las PQR que todavía no tienen responsable asignado
+export const getAvailablePqrsController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const pqrs = await getAvailablePqrsService();
+
+    return res.status(200).json({
+      message: "PQR disponibles obtenidas correctamente",
+      pqrs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al obtener las PQR disponibles",
+    });
+  }
+};
+
+// Permite que un AGENT tome una PQR
+export const takePqrController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const agentId = req.user?.id;
+
+    const pqrId = Number(id);
+
+    if (isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    if (!agentId) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+    const pqrExists = await getPqrWithAssignedService(pqrId);
+
+    if (!pqrExists) {
+      return res.status(404).json({
+        message: "La PQR no existe",
+      });
+    }
+
+    if (pqrExists.assignedToId === agentId) {
+  return res.status(400).json({
+    message: "Esta PQR ya está asignada a ti",
+  });
+}
+
+    if (pqrExists.assignedToId) {
+      return res.status(400).json({
+        message: "Esta PQR ya fue tomada por otro agente",
+      });
+    }
+
+    const pqr = await takePqrService(pqrId, agentId);
+
+    if (!pqr) {
+      return res.status(400).json({
+        message: "No se pudo tomar la PQR. Puede que ya haya sido asignada.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "PQR tomada correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al tomar la PQR",
+    });
+  }
+};
+
+// Obtiene las PQR asignadas al AGENT autenticado
+export const getMyAssignedPqrsController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const agentId = req.user?.id;
+
+    if (!agentId) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+    const pqrs = await getMyAssignedPqrsService(agentId);
+
+    return res.status(200).json({
+      message: "PQR asignadas obtenidas correctamente",
+      pqrs,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al obtener las PQR asignadas",
     });
   }
 };

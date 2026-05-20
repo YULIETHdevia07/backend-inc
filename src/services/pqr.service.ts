@@ -94,3 +94,136 @@ export const respondPqrService = async (
 
   return pqr;
 };
+
+// Obtiene las PQR que todavía no tienen responsable asignado
+export const getAvailablePqrsService = async () => {
+  const pqrs = await prisma.pQR.findMany({
+    where: {
+      assignedToId: null,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  return pqrs;
+};
+
+// Permite que un AGENT tome una PQR
+export const takePqrService = async (
+  pqrId: number,
+  agentId: number
+) => {
+  const result = await prisma.pQR.updateMany({
+    where: {
+      id: pqrId,
+      assignedToId: null,
+    },
+    data: {
+      assignedToId: agentId,
+    },
+  });
+
+  if (result.count === 0) {
+    return null;
+  }
+
+  const pqr = await prisma.pQR.findUnique({
+    where: {
+      id: pqrId,
+    },
+    include: {
+      //  usuario que creó la PQR
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      // agente que tomó la PQR
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  return pqr;
+};
+
+// Obtiene las PQR asignadas al AGENT autenticado
+export const getMyAssignedPqrsService = async (agentId: number) => {
+  const pqrs = await prisma.pQR.findMany({
+    where: {
+      assignedToId: agentId,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  return pqrs;
+};
+
+// Consulta una PQR por id incluyendo su responsable
+export const getPqrWithAssignedService = async (pqrId: number) => {
+  const pqr = await prisma.pQR.findUnique({
+    where: {
+      id: pqrId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  return pqr;
+};

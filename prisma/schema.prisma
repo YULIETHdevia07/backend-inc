@@ -33,11 +33,13 @@ model User {
   email    String @unique
   password String
   role     Role   @default(USER)
-  pqrs     PQR[]
+
+  pqrsCreated  PQR[] @relation("UserPqrs")
+  pqrsAssigned PQR[] @relation("AgentPqrs")
 }
 
 model PQR {
-  id          Int       @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   caseType    PqrCaseType
   description String      @db.VarChar(500)
   status      PqrStatus   @default(PENDIENTE)
@@ -46,5 +48,8 @@ model PQR {
   updatedAt   DateTime    @updatedAt
 
   userId Int
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation("UserPqrs", fields: [userId], references: [id])
+
+  assignedToId Int?
+  assignedTo   User? @relation("AgentPqrs", fields: [assignedToId], references: [id])
 }

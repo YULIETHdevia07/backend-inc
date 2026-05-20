@@ -214,7 +214,7 @@ Funciones principales:
 - Denegar acceso no autorizado
 - Adjuntar usuario autenticado al request
 
-## Middleware de Roles ADMIN
+## Middleware de Roles
 
 ### Archivo creado
 
@@ -222,27 +222,76 @@ Funciones principales:
 src/middlewares/role.middleware.ts
 ```
 
+---
+
 ## Descripción
 
-Se creó un middleware encargado de validar que el usuario autenticado tenga permisos de administrador (`ADMIN`) antes de acceder a rutas protegidas.
+Se creó un middleware reutilizable encargado de validar que el usuario autenticado tenga uno o varios roles permitidos antes de acceder a rutas protegidas.
 
-### Funcionalidades
+Este middleware reemplaza el uso exclusivo de `adminMiddleware`, ya que permite validar diferentes tipos de usuarios como `ADMIN`, `AGENT` o `USER`, según la necesidad de cada endpoint.
 
-- Verificar que exista un usuario autenticado
-- Validar que el rol del usuario sea `ADMIN`
-- Denegar acceso a usuarios sin permisos
-- Permitir acceso a rutas administrativas
+---
+
+## Roles disponibles
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Funcionalidades
+
+- Verifica que exista un usuario autenticado.
+- Valida que el rol del usuario esté dentro de los roles permitidos.
+- Deniega el acceso a usuarios sin permisos.
+- Permite proteger rutas según uno o varios roles.
+- Reutiliza la misma lógica para rutas de administrador, agente o usuario autenticado.
+
+---
 
 ## Uso del middleware
 
-Este middleware debe ejecutarse después de `authMiddleware`.
+Este middleware debe ejecutarse después de `authMiddleware`, porque primero se debe validar el token JWT y cargar la información del usuario autenticado.
+
+---
+
+## Ejemplo para ruta solo ADMIN
 
 ```ts
 router.get(
-  "/admin",
+  "/users",
   authMiddleware,
-  adminMiddleware,
-  controlador
+  roleMiddleware(["ADMIN"]),
+  getUsers
+);
+```
+
+---
+
+## Ejemplo para ruta ADMIN y AGENT
+
+```ts
+router.get(
+  "/available",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "AGENT"]),
+  getAvailablePqrsController
+);
+```
+
+---
+
+## Ejemplo para ruta USER, ADMIN y AGENT
+
+```ts
+router.post(
+  "/pqrs",
+  authMiddleware,
+  roleMiddleware(["USER", "ADMIN", "AGENT"]),
+  createPqrController
 );
 ```
 

@@ -1,7 +1,14 @@
 import { Router } from "express";
-import { createPqr, getAllPqrs, getMyPqrs, updatePqrStatus, respondPqr } from "../controllers/pqr.controller.js";
+import {
+  createPqr,
+  getAllPqrs,
+  getMyPqrs, updatePqrStatus, respondPqr,
+  getAvailablePqrsController,
+  getMyAssignedPqrsController,
+  takePqrController
+} from "../controllers/pqr.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { adminMiddleware } from "../middlewares/role.middleware.js";
+import { roleMiddleware } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
@@ -11,21 +18,42 @@ router.get("/my", authMiddleware, getMyPqrs);
 router.get(
   "/",
   authMiddleware,
-  adminMiddleware,
+  roleMiddleware(["ADMIN"]),
   getAllPqrs
 );
 router.patch(
   "/:id/status",
   authMiddleware,
-  adminMiddleware,
+  roleMiddleware(["ADMIN"]),
   updatePqrStatus
 );
 
 router.patch(
   "/:id/respond",
   authMiddleware,
-  adminMiddleware,
+  roleMiddleware(["ADMIN"]),
   respondPqr
+);
+
+router.get(
+  "/available",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "AGENT"]),
+  getAvailablePqrsController
+);
+
+router.patch(
+  "/:id/take",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "AGENT"]),
+  takePqrController
+);
+
+router.get(
+  "/assigned/my",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "AGENT"]),
+  getMyAssignedPqrsController
 );
 
 export default router;

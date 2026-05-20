@@ -7,13 +7,13 @@ import {
   updateUserRole,
 } from "../controllers/user.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { adminMiddleware } from "../middlewares/role.middleware.js";
+import { roleMiddleware } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.get("/", authMiddleware, adminMiddleware, getUsers);
+router.get("/", authMiddleware, roleMiddleware(["ADMIN"]), getUsers);
 
-router.patch("/:id/role", authMiddleware, adminMiddleware, updateUserRole);
+router.patch("/:id/role", authMiddleware, roleMiddleware(["ADMIN"]), updateUserRole);
 
 
 router.post("/register", registerUser);
