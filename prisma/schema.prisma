@@ -16,7 +16,6 @@ enum Role {
 enum PqrStatus {
   PENDIENTE
   EN_PROCESO
-  RESPONDIDA
   CERRADA
 }
 

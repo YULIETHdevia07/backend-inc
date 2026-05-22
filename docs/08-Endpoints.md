@@ -644,7 +644,7 @@ Endpoint privado encargado de obtener todas las PQR registradas en el sistema.
 
 Esta ruta está protegida por autenticación JWT y validación de rol, por lo tanto, solo puede ser utilizada por usuarios con rol `ADMIN`.
 
-El administrador podrá visualizar todas las solicitudes creadas por los usuarios, incluyendo la información básica del usuario que creó cada PQR.
+El administrador podrá visualizar todas las solicitudes creadas por los usuarios, incluyendo la información básica del usuario que creó cada PQR y, en caso de que la PQR haya sido tomada por un agente, también podrá visualizar la información del agente asignado.
 
 ---
 
@@ -677,13 +677,45 @@ Authorization: Bearer TOKEN_ADMIN
       "createdAt": "2026-05-12T00:00:00.000Z",
       "updatedAt": "2026-05-12T00:00:00.000Z",
       "userId": 1,
+      "assignedToId": 2,
       "user": {
         "id": 1,
         "name": "Juan",
         "email": "juan@gmail.com",
         "role": "USER"
+      },
+      "assignedTo": {
+        "id": 2,
+        "name": "Agente María",
+        "email": "agente@gmail.com",
+        "role": "AGENT"
       }
-    }...
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta cuando la PQR no tiene agente asignado
+
+Si la PQR aún no ha sido tomada por ningún agente, el campo assignedToId llegará como null y la información del agente asignado también llegará como null.
+
+
+```json
+{
+  "message": "PQR obtenidas correctamente",
+  "pqrs": [
+    {
+      "id": 1,
+      "title": "Solicitud de prueba",
+      "description": "Esta es una PQR creada desde Postman para probar el módulo.",
+      "status": "PENDIENTE",
+      "response": null,
+      "createdAt": "2026-05-12T00:00:00.000Z",
+      "updatedAt": "2026-05-12T00:00:00.000Z",
+      "userId": 1
+    }
   ]
 }
 ```
@@ -755,6 +787,8 @@ Content-Type: application/json
 ## Acceso permitido
 
 - ADMIN
+- AGENT
+
 
 ---
 
@@ -770,7 +804,6 @@ Content-Type: application/json
 
 - PENDIENTE
 - EN_PROCESO
-- RESPONDIDA
 - CERRADA
 
 ---
@@ -843,7 +876,6 @@ Content-Type: application/json
   "allowedStatus": [
     "PENDIENTE",
     "EN_PROCESO",
-    "RESPONDIDA",
     "CERRADA"
   ]
 }
@@ -879,9 +911,7 @@ PATCH /api/pqrs/1/respond
 
 Endpoint privado encargado de permitir que el administrador responda una PQR.
 
-Cuando el administrador responde una PQR, el sistema guarda la respuesta en el campo `response` y cambia automáticamente el estado de la solicitud a `RESPONDIDA`.
-
-Esta ruta solo puede ser utilizada por usuarios autenticados con rol `ADMIN`.
+Cuando el administrador responde una PQR, el sistema guarda la respuesta en el campo `response`.
 
 Funcionamiento interno:
 
@@ -892,7 +922,6 @@ Funcionamiento interno:
 - Valida que la respuesta no contenga únicamente espacios.
 - Consulta si la PQR existe en la base de datos.
   Si existe, guarda la respuesta limpia.
-- Cambia automáticamente el estado de la PQR a RESPONDIDA.
 
 ---
 
@@ -908,6 +937,7 @@ Content-Type: application/json
 ## Acceso permitido
 
 - ADMIN
+- AGENT
 
 ---
 
@@ -938,7 +968,7 @@ Content-Type: application/json
     "id": 1,
     "caseType": "SAP",
     "description": "Esta es una PQR creada desde Postman.",
-    "status": "RESPONDIDA",
+    "status": "EN_PROCESO",
     "response": "Su solicitud fue revisada. Se realizará el seguimiento correspondiente desde el área encargada.",
     "createdAt": "2026-05-12T00:00:00.000Z",
     "updatedAt": "2026-05-12T00:00:00.000Z",

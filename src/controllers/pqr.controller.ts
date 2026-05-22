@@ -132,7 +132,6 @@ export const updatePqrStatus = async (
     const allowedStatus: PqrStatus[] = [
       "PENDIENTE",
       "EN_PROCESO",
-      "RESPONDIDA",
       "CERRADA",
     ];
 

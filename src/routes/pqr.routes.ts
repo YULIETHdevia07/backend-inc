@@ -24,14 +24,14 @@ router.get(
 router.patch(
   "/:id/status",
   authMiddleware,
-  roleMiddleware(["ADMIN"]),
+  roleMiddleware(["ADMIN", "AGENT"]),
   updatePqrStatus
 );
 
 router.patch(
   "/:id/respond",
   authMiddleware,
-  roleMiddleware(["ADMIN"]),
+  roleMiddleware(["ADMIN", "AGENT"]),
   respondPqr
 );
 
