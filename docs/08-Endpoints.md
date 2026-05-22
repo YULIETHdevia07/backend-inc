@@ -1426,6 +1426,199 @@ Content-Type: application/json
 
 ---
 
+# Calificar una PQR cerrada
+
+## Endpoint protegido para USER
+
+```http
+PATCH /api/pqrs/:id/rate
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/rate
+```
+
+## Descripción
+
+Endpoint privado encargado de permitir que un usuario califique una PQR creada por él, siempre que la PQR se encuentre en estado `CERRADA`.
+
+Esta ruta permite registrar una calificación del servicio recibido y, de manera opcional, un comentario sobre la atención brindada.
+
+Funcionamiento interno:
+
+- Obtiene el id desde los parámetros de la URL.
+- Valida que el id sea válido.
+- Valida que la calificación sea enviada.
+- Verifica que la calificación esté entre 1 y 5.
+- Valida que el comentario no supere los 300 caracteres.
+- Consulta si la PQR existe.
+- Verifica que la PQR pertenezca al usuario autenticado.
+- Valida que la PQR esté en estado `CERRADA`.
+- Verifica que la PQR no haya sido calificada anteriormente.
+- Si todas las validaciones son correctas, registra la calificación, el comentario y la fecha de calificación.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_USER
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+- USER
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador de la PQR que se desea calificar |
+
+---
+
+## Body
+
+```json
+{
+  "rating": 5,
+  "ratingComment": "La atención fue rápida y clara."
+}
+```
+
+---
+
+## Campos del body
+
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| rating | number | Sí | Calificación asignada por el usuario. Debe estar entre 1 y 5 |
+| ratingComment | string | No | Comentario opcional sobre la atención recibida. Máximo 300 caracteres |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+    "message": "PQR calificada correctamente",
+    "pqr": {
+        "id": 4,
+        "caseType": "OTRO",
+        "description": "La plataforma muestra errores constantes durante el proceso de registro.",
+        "status": "CERRADA",
+        "response": null,
+        "createdAt": "2026-05-23T10:30:00.000Z",
+        "updatedAt": "2026-05-22T22:19:48.774Z",
+        "userId": 2,
+        "assignedToId": null,
+        "priority": "MEDIA",
+        "rating": 5,
+        "ratingComment": "La atención fue rápida y clara.",
+        "ratedAt": "2026-05-22T22:19:48.773Z"
+    }
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si no se envía calificación
+
+```json
+{
+  "message": "La calificación es obligatoria"
+}
+```
+
+---
+
+## Respuesta si la calificación no está entre 1 y 5
+
+```json
+{
+  "message": "La calificación debe estar entre 1 y 5"
+}
+```
+
+---
+
+## Respuesta si el comentario supera los 300 caracteres
+
+```json
+{
+  "message": "El comentario no puede superar los 300 caracteres"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la PQR no pertenece al usuario autenticado
+
+```json
+{
+  "message": "Solo puedes calificar las PQR creadas por ti"
+}
+```
+
+---
+
+## Respuesta si la PQR no está cerrada
+
+```json
+{
+  "message": "Solo puedes calificar una PQR cerrada"
+}
+```
+
+---
+
+## Respuesta si la PQR ya fue calificada
+
+```json
+{
+  "message": "Esta PQR ya fue calificada"
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al calificar la PQR"
+}
+```
+
+---
+
 # Resumen actualizado de endpoints funcionales
 
 | Método | Endpoint | Descripción | Acceso |
@@ -1444,8 +1637,8 @@ Content-Type: application/json
 | PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
 | PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
 | PATCH | /api/users/:id/role | Cambia el rol de un usuario | ADMIN |
-```md
 | PATCH | /api/pqrs/:id/priority | Cambia la prioridad de una PQR | ADMIN / AGENT |
+| PATCH | /api/pqrs/:id/rate | Permite calificar una PQR cerrada | USER |
 ```
 
 ---

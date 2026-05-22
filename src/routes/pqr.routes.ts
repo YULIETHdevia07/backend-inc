@@ -9,6 +9,7 @@ import {
   getMyAssignedPqrsController,
   takePqrController,
   updatePqrPriorityController,
+  ratePqrController,
 } from "../controllers/pqr.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -36,6 +37,13 @@ router.patch(
   authMiddleware,
   roleMiddleware(["ADMIN", "AGENT"]),
   updatePqrPriorityController
+);
+
+router.patch(
+  "/:id/rate",
+  authMiddleware,
+  roleMiddleware(["USER"]),
+  ratePqrController
 );
 
 router.patch(

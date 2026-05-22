@@ -11,6 +11,7 @@ import {
   takePqrService,
   getPqrWithAssignedService,
   updatePqrPriorityService,
+  ratePqrService,
 } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 import { PqrStatus, PqrCaseType, PqrPriority } from "@prisma/client";
@@ -415,6 +416,94 @@ export const updatePqrPriorityController = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al actualizar la prioridad de la PQR",
+    });
+  }
+};
+
+// Permite que un usuario califique una PQR cerrada.
+export const ratePqrController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { rating, ratingComment } = req.body;
+
+    const pqrId = Number(id);
+    const ratingValue = Number(rating);
+
+    if (Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    if (rating === undefined || rating === null) {
+      return res.status(400).json({
+        message: "La calificación es obligatoria",
+      });
+    }
+
+    if (
+      Number.isNaN(ratingValue) ||
+      ratingValue < 1 ||
+      ratingValue > 5
+    ) {
+      return res.status(400).json({
+        message: "La calificación debe estar entre 1 y 5",
+      });
+    }
+
+    if (ratingComment && ratingComment.trim().length > 300) {
+      return res.status(400).json({
+        message: "El comentario no puede superar los 300 caracteres",
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+    const existingPqr = await getPqrByIdService(pqrId);
+
+    if (!existingPqr) {
+      return res.status(404).json({
+        message: "La PQR no existe",
+      });
+    }
+
+    if (existingPqr.userId !== req.user.id) {
+      return res.status(403).json({
+        message: "Solo puedes calificar las PQR creadas por ti",
+      });
+    }
+
+    if (existingPqr.status !== "CERRADA") {
+      return res.status(400).json({
+        message: "Solo puedes calificar una PQR cerrada",
+      });
+    }
+
+    if (existingPqr.rating !== null) {
+      return res.status(400).json({
+        message: "Esta PQR ya fue calificada",
+      });
+    }
+
+    const pqr = await ratePqrService(pqrId, {
+      rating: ratingValue,
+      ratingComment: ratingComment?.trim(),
+    });
+
+    return res.status(200).json({
+      message: "PQR calificada correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al calificar la PQR",
     });
   }
 };

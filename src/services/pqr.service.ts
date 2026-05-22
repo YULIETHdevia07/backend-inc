@@ -1,5 +1,5 @@
 import prisma from "../../prisma/client.js";
-import type { CreatePqrData } from "../interfaces/pqr.interface.js";
+import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
 import { PqrPriority, PqrStatus } from "@prisma/client";
 
 export const createPqrService = async ({
@@ -248,6 +248,25 @@ export const updatePqrPriorityService = async (
     data: {
       priority,
     },
+  });
+
+  return pqr;
+};
+
+// Permite calificar una PQR cerrada.
+export const ratePqrService = async (
+  pqrId: number,
+  data: RatePqrData
+) => {
+  const pqr = await prisma.pQR.update({
+    where: {
+      id: pqrId,
+    },
+    data: {
+      rating: data.rating,
+      ratingComment: data.ratingComment ?? null,
+      ratedAt: new Date(),
+    }
   });
 
   return pqr;
