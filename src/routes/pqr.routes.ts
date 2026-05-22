@@ -2,10 +2,13 @@ import { Router } from "express";
 import {
   createPqr,
   getAllPqrs,
-  getMyPqrs, updatePqrStatus, respondPqr,
+  getMyPqrs,
+  updatePqrStatus,
+  respondPqr,
   getAvailablePqrsController,
   getMyAssignedPqrsController,
-  takePqrController
+  takePqrController,
+  updatePqrPriorityController,
 } from "../controllers/pqr.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
@@ -26,6 +29,13 @@ router.patch(
   authMiddleware,
   roleMiddleware(["ADMIN", "AGENT"]),
   updatePqrStatus
+);
+
+router.patch(
+  "/:id/priority",
+  authMiddleware,
+  roleMiddleware(["ADMIN", "AGENT"]),
+  updatePqrPriorityController
 );
 
 router.patch(

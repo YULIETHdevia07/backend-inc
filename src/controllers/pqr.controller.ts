@@ -1,13 +1,19 @@
 import type { Response } from "express";
-import { createPqrService, getMyPqrsService, getAllPqrsService, getPqrByIdService, updatePqrStatusService, respondPqrService } from "../services/pqr.service.js";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
-import { PqrStatus, PqrCaseType } from "@prisma/client";
 import {
+  createPqrService,
+  getMyPqrsService,
+  getAllPqrsService,
+  getPqrByIdService,
+  updatePqrStatusService,
+  respondPqrService,
   getAvailablePqrsService,
   getMyAssignedPqrsService,
   takePqrService,
   getPqrWithAssignedService,
+  updatePqrPriorityService,
 } from "../services/pqr.service.js";
+import type { AuthRequest } from "../interfaces/auth.interface.js";
+import { PqrStatus, PqrCaseType, PqrPriority } from "@prisma/client";
 
 export const createPqr = async (
   req: AuthRequest,
@@ -277,10 +283,10 @@ export const takePqrController = async (
     }
 
     if (pqrExists.assignedToId === agentId) {
-  return res.status(400).json({
-    message: "Esta PQR ya está asignada a ti",
-  });
-}
+      return res.status(400).json({
+        message: "Esta PQR ya está asignada a ti",
+      });
+    }
 
     if (pqrExists.assignedToId) {
       return res.status(400).json({
@@ -330,6 +336,85 @@ export const getMyAssignedPqrsController = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al obtener las PQR asignadas",
+    });
+  }
+};
+
+// Cambia la prioridad de una PQR.
+export const updatePqrPriorityController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { priority } = req.body;
+
+    const pqrId = Number(id);
+
+    if (Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    const allowedPriorities: PqrPriority[] = [
+      "BAJA",
+      "MEDIA",
+      "ALTA",
+      "URGENTE",
+    ];
+
+    if (!priority) {
+      return res.status(400).json({
+        message: "La prioridad es obligatoria",
+      });
+    }
+
+    if (!allowedPriorities.includes(priority)) {
+      return res.status(400).json({
+        message: "Prioridad no válida",
+        allowedPriorities,
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+    const existingPqr = await getPqrWithAssignedService(pqrId);
+
+    if (!existingPqr) {
+      return res.status(404).json({
+        message: "La PQR no existe",
+      });
+    }
+
+    if (
+      req.user.role === "AGENT" &&
+      existingPqr.assignedToId !== req.user.id
+    ) {
+      return res.status(403).json({
+        message: "Solo puedes cambiar la prioridad de las PQR asignadas a ti",
+      });
+    }
+
+    if (existingPqr.status === "CERRADA") {
+      return res.status(400).json({
+        message: "No se puede cambiar la prioridad de una PQR cerrada",
+      });
+    }
+
+    const pqr = await updatePqrPriorityService(pqrId, priority);
+
+    return res.status(200).json({
+      message: "Prioridad de la PQR actualizada correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al actualizar la prioridad de la PQR",
     });
   }
 };

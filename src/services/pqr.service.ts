@@ -1,6 +1,6 @@
 import prisma from "../../prisma/client.js";
 import type { CreatePqrData } from "../interfaces/pqr.interface.js";
-import { PqrStatus } from "@prisma/client";
+import { PqrPriority, PqrStatus } from "@prisma/client";
 
 export const createPqrService = async ({
   caseType,
@@ -230,6 +230,23 @@ export const getPqrWithAssignedService = async (pqrId: number) => {
           role: true,
         },
       },
+    },
+  });
+
+  return pqr;
+};
+
+// Cambia la prioridad de una PQR.
+export const updatePqrPriorityService = async (
+  pqrId: number,
+  priority: PqrPriority
+) => {
+  const pqr = await prisma.pQR.update({
+    where: {
+      id: pqrId,
+    },
+    data: {
+      priority,
     },
   });
 

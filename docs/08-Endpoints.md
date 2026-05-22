@@ -157,26 +157,6 @@ Authorization: Bearer TOKEN_ADMIN
 
 ---
 
-## Respuesta si el usuario autenticado no es ADMIN
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
-## Respuesta si no hay token
-
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
-}
-```
-
----
-
 ## Respuesta token inválido
 
 ```json
@@ -322,16 +302,6 @@ Authorization: Bearer TOKEN_ADMIN
 
 ---
 
-## Respuesta si el usuario autenticado no es ADMIN
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
 ## Respuesta en caso de error
 
 ```json
@@ -447,16 +417,6 @@ Authorization: Bearer TOKEN
     "email": "marlon@gmail.com",
     "role": "USER"
   }
-}
-```
-
----
-
-## Respuesta sin token
-
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
 }
 ```
 
@@ -722,26 +682,6 @@ Si la PQR aún no ha sido tomada por ningún agente, el campo assignedToId llega
 
 ---
 
-## Respuesta si el usuario no es ADMIN
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
-## Respuesta si no hay token
-
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
-}
-```
-
----
-
 # Cambiar estado de una PQR
 
 ## Endpoint protegido para ADMIN
@@ -883,16 +823,6 @@ Content-Type: application/json
 
 ---
 
-## Respuesta si el usuario no es ADMIN
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
 # Responder una PQR
 
 ## Endpoint protegido para ADMIN
@@ -1009,16 +939,6 @@ Content-Type: application/json
 
 ---
 
-## Respuesta si el usuario no es ADMIN
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
 ## Respuesta si la PQR no existe
 
 ```json
@@ -1099,26 +1019,6 @@ Authorization: Bearer TOKEN_AGENT
       }
     }
   ]
-}
-```
-
----
-
-## Respuesta si el usuario no tiene permisos
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
-## Respuesta si no hay token
-
-```json
-{
-  "message": "Acceso denegado. Token no proporcionado."
 }
 ```
 
@@ -1262,16 +1162,6 @@ No requiere body
 
 ---
 
-## Respuesta si el usuario no tiene permisos
-
-```json
-{
-  "message": "No tienes permisos para acceder a este recurso"
-}
-```
-
----
-
 ## Respuesta en caso de error
 
 ```json
@@ -1348,31 +1238,179 @@ Authorization: Bearer TOKEN_AGENT
 
 ---
 
-## Respuesta si el usuario no está autenticado
+## Respuesta en caso de error
 
 ```json
 {
-  "message": "Usuario no autenticado"
+  "message": "Error al obtener las PQR asignadas"
 }
 ```
 
 ---
 
-## Respuesta si el usuario no tiene permisos
+# Cambiar prioridad de una PQR
+
+## Endpoint protegido para ADMIN / AGENT
+
+```http
+PATCH /api/pqrs/:id/priority
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/priority
+```
+
+## Descripción
+
+Endpoint privado encargado de cambiar la prioridad de una PQR existente.
+
+Esta ruta permite que un usuario con rol `ADMIN` o `AGENT` actualice la prioridad de una PQR, siempre que cumpla con las validaciones correspondientes.
+
+Funcionamiento interno:
+
+- Obtiene el id desde los parámetros de la URL.
+- Convierte el id a número.
+- Valida que el id sea válido.
+- Valida que la prioridad sea enviada.
+- Verifica que la prioridad esté dentro de las prioridades permitidas.
+- Consulta si la PQR existe.
+- Valida que la PQR no esté cerrada.
+- Si el usuario autenticado es `AGENT`, valida que la PQR esté asignada a él.
+- Si todas las validaciones son correctas, actualiza la prioridad de la PQR.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_AGENT
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+- ADMIN
+- AGENT
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo | Descripción |
+|---|---|---|
+| id | number | Identificador de la PQR a la que se desea cambiar la prioridad |
+
+---
+
+## Prioridades permitidas
+
+- BAJA
+- MEDIA
+- ALTA
+- URGENTE
+
+---
+
+## Body
 
 ```json
 {
-  "message": "No tienes permisos para acceder a este recurso"
+  "priority": "ALTA"
 }
 ```
 
 ---
 
-## Respuesta si no hay token
+## Respuesta exitosa
 
 ```json
 {
-  "message": "Acceso denegado. Token no proporcionado."
+  "message": "Prioridad de la PQR actualizada correctamente",
+    "pqr": {
+        "id": 1,
+        "caseType": "SAP",
+        "description": "La plataforma presenta errores al cargar los reportes.",
+        "status": "EN_PROCESO",
+        "response": null,
+        "createdAt": "2026-05-20T10:30:00.000Z",
+        "updatedAt": "2026-05-22T21:13:07.796Z",
+        "userId": 2,
+        "assignedToId": 3,
+        "priority": "ALTA",
+        "rating": null,
+        "ratingComment": null,
+        "ratedAt": null
+    }
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si no se envía prioridad
+
+```json
+{
+  "message": "La prioridad es obligatoria"
+}
+```
+
+---
+
+## Respuesta si la prioridad no es válida
+
+```json
+{
+  "message": "Prioridad no válida",
+  "allowedPriorities": [
+    "BAJA",
+    "MEDIA",
+    "ALTA",
+    "URGENTE"
+  ]
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la PQR está cerrada
+
+```json
+{
+  "message": "No se puede cambiar la prioridad de una PQR cerrada"
+}
+```
+
+---
+
+## Respuesta si el AGENT intenta cambiar una PQR no asignada a él
+
+```json
+{
+  "message": "Solo puedes cambiar la prioridad de las PQR asignadas a ti"
 }
 ```
 
@@ -1382,7 +1420,7 @@ Authorization: Bearer TOKEN_AGENT
 
 ```json
 {
-  "message": "Error al obtener las PQR asignadas"
+  "message": "Error al actualizar la prioridad de la PQR"
 }
 ```
 
@@ -1406,5 +1444,8 @@ Authorization: Bearer TOKEN_AGENT
 | PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
 | PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
 | PATCH | /api/users/:id/role | Cambia el rol de un usuario | ADMIN |
+```md
+| PATCH | /api/pqrs/:id/priority | Cambia la prioridad de una PQR | ADMIN / AGENT |
+```
 
 ---

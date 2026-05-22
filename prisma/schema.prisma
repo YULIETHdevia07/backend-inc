@@ -26,6 +26,13 @@ enum PqrCaseType {
   OTRO
 }
 
+enum PqrPriority {
+  BAJA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -51,4 +58,11 @@ model PQR {
 
   assignedToId Int?
   assignedTo   User? @relation("AgentPqrs", fields: [assignedToId], references: [id])
+
+  priority PqrPriority @default(MEDIA)
+
+  //campos para calificación
+  rating        Int?
+  ratingComment String?
+  ratedAt       DateTime?
 }
