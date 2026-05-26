@@ -24,55 +24,6 @@ export const getUsers = async (
 
 };
 
-export const registerUser = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        message: "Todos los campos son obligatorios",
-      });
-    }
-
-    const userExists = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
-
-    if (userExists) {
-      return res.status(400).json({
-        message: "El usuario ya existe",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
-
-    const { password: _, ...userWithoutPassword } = user;
-
-    return res.status(201).json({
-      message: "Usuario registrado correctamente",
-      userWithoutPassword,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Error al registrar usuario",
-      error,
-    });
-  }
-};
-
 export const loginUser = async (
   req: Request,
   res: Response

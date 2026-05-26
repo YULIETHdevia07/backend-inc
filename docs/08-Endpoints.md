@@ -34,17 +34,47 @@ Endpoint utilizado para verificar el correcto funcionamiento de la API.
 POST /api/users/register
 ```
 
-### Descripción
+## Descripción
 
 Endpoint encargado del registro de nuevos usuarios.
 
 Funciones implementadas:
 
-- Validación de campos
+- Limpieza y normalización de datos
+- Validación de campos obligatorios
+- Validación de nombre
+- Validación de formato de correo electrónico
+- Validación de longitud mínima de contraseña
 - Verificación de email existente
-- Encriptación de contraseña con bcrypt
+- Encriptación segura de contraseña con bcrypt
 - Registro en MySQL mediante Prisma
 - Protección de contraseña en respuestas
+
+---
+
+## Validaciones implementadas
+
+### Nombre
+
+- Es obligatorio
+- Solo permite letras
+- Debe tener mínimo 3 caracteres
+- Se eliminan espacios innecesarios
+
+### Correo electrónico
+
+- Es obligatorio
+- Debe tener un formato válido
+- Se convierte automáticamente a minúsculas
+- Se eliminan espacios innecesarios
+- No puede estar registrado previamente
+
+### Contraseña
+
+- Es obligatoria
+- Debe tener mínimo 6 caracteres
+- Se eliminan espacios innecesarios
+- Se almacena encriptada mediante bcrypt
 
 ---
 
@@ -68,8 +98,59 @@ Funciones implementadas:
   "user": {
     "id": 1,
     "name": "Juan",
-    "email": "juan@gmail.com"
+    "email": "juan@gmail.com",
+    "role": "USER"
   }
+}
+```
+
+---
+
+## Respuesta si faltan campos
+
+```json
+{
+  "message": "Todos los campos son obligatorios"
+}
+```
+
+---
+
+## Respuesta si el nombre contiene caracteres inválidos
+
+```json
+{
+  "message": "El nombre solo puede contener letras"
+}
+```
+
+---
+
+## Respuesta si el nombre tiene menos de 3 caracteres
+
+```json
+{
+  "message": "El nombre debe tener mínimo 3 caracteres"
+}
+```
+
+---
+
+## Respuesta si el correo no tiene formato válido
+
+```json
+{
+  "message": "El correo electrónico no tiene un formato válido"
+}
+```
+
+---
+
+## Respuesta si la contraseña tiene menos de 6 caracteres
+
+```json
+{
+  "message": "La contraseña debe tener mínimo 6 caracteres"
 }
 ```
 
