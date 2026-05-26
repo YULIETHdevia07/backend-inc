@@ -1,19 +1,13 @@
-
 import bcrypt from "bcryptjs";
 import * as XLSX from "xlsx";
+import { Role } from "@prisma/client";
 import prisma from "../../prisma/client.js";
 import type {
   BulkRegisterUserData,
   BulkRegisterUserError,
+  RegisterUserData,
 } from "../interfaces/auth.interface.js";
 import { isValidEmail, isValidName } from "../utils/validators.js";
-
-
-interface RegisterUserData {
-  name: string;
-  email: string;
-  password: string;
-}
 
 export const registerUserService = async ({
   name,
@@ -73,6 +67,37 @@ export const registerUserService = async ({
   return userWithoutPassword;
 };
 
+// Valida que el archivo Excel tenga las columnas requeridas.
+const validateBulkUserColumns = (sheet: XLSX.WorkSheet) => {
+  const rows = XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+  });
+
+  const headers = rows[0];
+
+  if (!headers || headers.length === 0) {
+    throw new Error("El archivo Excel no contiene encabezados");
+  }
+
+  const normalizedHeaders = headers.map((header) =>
+    String(header).trim().toLowerCase()
+  );
+
+  const requiredColumns = ["name", "email", "password", "role"];
+
+  const missingColumns = requiredColumns.filter(
+    (column) => !normalizedHeaders.includes(column)
+  );
+
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `El archivo Excel no tiene las columnas requeridas: ${missingColumns.join(
+        ", "
+      )}. Las columnas obligatorias son: name, email, password y role.`
+    );
+  }
+};
+
 // Permite registrar usuarios mediante carga masiva desde un archivo Excel.
 export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   const workbook = XLSX.read(fileBuffer, {
@@ -93,6 +118,9 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     throw new Error("No se pudo leer la hoja del archivo Excel");
   }
 
+  // Valida que el archivo tenga las columnas requeridas.
+  validateBulkUserColumns(sheet);
+
   // Convierte la hoja de Excel en arreglo de objetos.
   const users = XLSX.utils.sheet_to_json<BulkRegisterUserData>(sheet);
 
@@ -111,11 +139,13 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     const cleanName = userData.name?.trim();
     const cleanEmail = userData.email?.trim().toLowerCase();
     const password = String(userData.password ?? "");
+    const role = String(userData.role ?? "").trim().toUpperCase() as Role;
 
     // Valida que la fila tenga todos los campos requeridos.
-    if (!cleanName || !cleanEmail || !password) {
+    if (!cleanName || !cleanEmail || !password || !role) {
       errors.push({
         row: rowNumber,
+        email: cleanEmail,
         message: "Todos los campos son obligatorios",
       });
       continue;
@@ -161,6 +191,16 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       continue;
     }
 
+    // Valida que el rol enviado sea válido.
+    if (!Object.values(Role).includes(role)) {
+      errors.push({
+        row: rowNumber,
+        email: cleanEmail,
+        message: "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT",
+      });
+      continue;
+    }
+
     // Valida que el correo no esté repetido dentro del mismo archivo.
     if (emailsInFile.has(cleanEmail)) {
       errors.push({
@@ -177,10 +217,11 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       name: cleanName,
       email: cleanEmail,
       password,
+      role,
     });
   }
 
-  // Si hay errores en formato o campos, no registra ningún usuario.
+  // Si hay errores de validación, no registra ningún usuario.
   if (errors.length > 0) {
     return {
       totalRows: users.length,
@@ -188,11 +229,11 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       totalErrors: errors.length,
       createdUsers: [],
       errors,
-      message: "El archivo contiene errores. Debe corregirlos y volver a subirlo.",
+      message: "El archivo contiene errores. No se registró ningún usuario.",
     };
   }
 
-  // Consulta en base de datos si ya existen correos del archivo.
+  // Consulta si alguno de los correos ya existe en la base de datos.
   const existingUsers = await prisma.user.findMany({
     where: {
       email: {
@@ -219,7 +260,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     }
   });
 
-  // Si algún correo ya existe, no registra ningún usuario.
+  // Si algún usuario ya existe, no registra ningún usuario.
   if (errors.length > 0) {
     return {
       totalRows: users.length,
@@ -227,11 +268,11 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       totalErrors: errors.length,
       createdUsers: [],
       errors,
-      message: "El archivo contiene usuarios ya registrados. No se registró ningún usuario.",
+      message: "El archivo contiene errores. No se registró ningún usuario.",
     };
   }
 
-  // Segunda fase: si todo está correcto, registra todos los usuarios.
+  // Segunda fase: si todo está correcto, prepara los usuarios.
   const usersToCreate = await Promise.all(
     validUsers.map(async (user) => {
       const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -240,11 +281,12 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
         name: user.name,
         email: user.email,
         password: hashedPassword,
+        role: user.role,
       };
     })
   );
 
-  // Registra todos los usuarios válidos en una sola operación.
+  // Registra todos los usuarios en una sola operación.
   await prisma.user.createMany({
     data: usersToCreate,
   });
@@ -260,6 +302,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       id: true,
       name: true,
       email: true,
+      role: true,
     },
   });
 

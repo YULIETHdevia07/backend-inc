@@ -176,6 +176,309 @@ Funciones implementadas:
 
 ---
 
+# Carga masiva de usuarios
+
+## Endpoint
+
+```http
+POST /api/auth/register/bulk
+```
+
+## Descripción
+
+Endpoint encargado de registrar usuarios mediante carga masiva desde un archivo Excel.
+
+Esta funcionalidad permite subir un archivo con varios usuarios y procesarlos de forma automática. El sistema lee el archivo, valida la información de cada fila y registra los usuarios en la base de datos.
+
+En esta carga masiva, el administrador puede definir el rol de cada usuario mediante la columna `role`.
+
+## Tipo de envío requerido
+
+Este endpoint no recibe datos en formato JSON.
+
+Debe enviarse mediante:
+
+```txt
+multipart/form-data
+```
+
+## Formato del archivo Excel
+
+El archivo debe tener las siguientes columnas en la primera fila:
+
+```txt
+name | email | role | password
+```
+
+### Ejemplo
+
+| name | email | role | password |
+|---|---|---|---|
+| Juan Pérez | juan@gmail.com | USER | 123456 |
+| Ana María | ana@gmail.com | AGENT | 123456 |
+| José Peña | jose@gmail.com | ADMIN | 123456 |
+
+## Campo requerido
+
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| file | File | Sí | Archivo Excel con los usuarios a registrar |
+
+## Ejemplo en Postman
+
+```txt
+Método: POST
+URL: http://localhost:4000/api/auth/register/bulk
+Body: form-data
+Key: file
+Type: File
+Value: usuarios.xlsx
+```
+
+## Validaciones implementadas
+
+### Archivo
+
+- El archivo es obligatorio.
+- Debe ser un archivo Excel.
+- Solo se permiten archivos con extensión `.xlsx` o `.xls`.
+- Debe contener al menos una hoja.
+- Debe contener usuarios para registrar.
+- Debe tener las columnas requeridas: `name`, `email`, `role` y `password`.
+
+### Nombre
+
+- Es obligatorio.
+- Solo permite letras, espacios, tildes y la letra ñ.
+- Debe tener mínimo 3 caracteres.
+- Se eliminan espacios innecesarios al inicio y al final.
+
+### Correo electrónico
+
+- Es obligatorio.
+- Debe tener un formato válido.
+- Se convierte automáticamente a minúsculas.
+- Se eliminan espacios innecesarios al inicio y al final.
+- No puede estar repetido dentro del archivo.
+- No puede estar registrado previamente en la base de datos.
+
+### Rol
+
+- Es obligatorio.
+- Se convierte automáticamente a mayúsculas.
+- Debe corresponder a uno de los roles permitidos.
+
+Roles permitidos:
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+### Contraseña
+
+- Es obligatoria.
+- Debe tener mínimo 6 caracteres.
+- Se almacena encriptada mediante bcrypt.
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Carga masiva procesada correctamente",
+  "result": {
+    "totalRows": 3,
+    "totalCreated": 3,
+    "totalErrors": 0,
+    "createdUsers": [
+      {
+        "id": 13,
+        "name": "Juan Pérez",
+        "email": "juan@gmail.com",
+        "role": "USER"
+      },
+      {
+        "id": 14,
+        "name": "Ana María",
+        "email": "ana@gmail.com",
+        "role": "AGENT"
+      },
+      {
+        "id": 15,
+        "name": "José Peña",
+        "email": "jose@gmail.com",
+        "role": "ADMIN"
+      }
+    ],
+    "errors": [],
+    "message": "Todos los usuarios fueron registrados correctamente."
+  }
+}
+```
+
+## Respuesta con errores de validación
+
+Cuando una o varias filas contienen errores, el sistema devuelve el detalle de cada error encontrado.
+
+Si la carga masiva está configurada como proceso completo, no se registra ningún usuario hasta que el archivo esté 100% correcto.
+
+```json
+{
+  "message": "Carga masiva procesada correctamente",
+  "result": {
+    "totalRows": 3,
+    "totalCreated": 0,
+    "totalErrors": 1,
+    "createdUsers": [],
+    "errors": [
+      {
+        "row": 2,
+        "email": "juan@gmail.com",
+        "message": "El usuario ya existe"
+      }
+    ],
+    "message": "El archivo contiene errores. No se registró ningún usuario."
+  }
+}
+```
+
+## Respuesta si no se envía archivo
+
+```json
+{
+  "message": "Debe subir un archivo Excel"
+}
+```
+
+## Respuesta si el tipo de archivo no es válido
+
+```json
+{
+  "message": "Solo se permiten archivos Excel"
+}
+```
+
+## Respuesta si el archivo no contiene encabezados
+
+```json
+{
+  "message": "El archivo Excel no contiene encabezados"
+}
+```
+
+## Respuesta si faltan columnas requeridas
+
+```json
+{
+  "message": "El archivo Excel no tiene las columnas requeridas: role. Las columnas obligatorias son: name, email, password y role."
+}
+```
+
+## Respuesta si el archivo no contiene hojas
+
+```json
+{
+  "message": "El archivo Excel no contiene hojas"
+}
+```
+
+## Respuesta si no se puede leer la hoja
+
+```json
+{
+  "message": "No se pudo leer la hoja del archivo Excel"
+}
+```
+
+## Respuesta si el archivo no contiene usuarios
+
+```json
+{
+  "message": "El archivo Excel no contiene usuarios para registrar"
+}
+```
+
+## Respuesta si una fila tiene campos incompletos
+
+```json
+{
+  "row": 2,
+  "email": "ana@gmail.com",
+  "message": "Todos los campos son obligatorios"
+}
+```
+
+## Respuesta si el nombre contiene caracteres inválidos
+
+```json
+{
+  "row": 2,
+  "email": "juan@gmail.com",
+  "message": "El nombre solo puede contener letras"
+}
+```
+
+## Respuesta si el correo no tiene formato válido
+
+```json
+{
+  "row": 2,
+  "email": "juan",
+  "message": "El correo electrónico no tiene un formato válido"
+}
+```
+
+## Respuesta si el rol no es válido
+
+```json
+{
+  "row": 2,
+  "email": "juan@gmail.com",
+  "message": "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT"
+}
+```
+
+## Respuesta si el correo está duplicado dentro del archivo
+
+```json
+{
+  "row": 3,
+  "email": "juan@gmail.com",
+  "message": "Correo duplicado dentro del archivo"
+}
+```
+
+## Respuesta si el usuario ya existe
+
+```json
+{
+  "row": 2,
+  "email": "juan@gmail.com",
+  "message": "El usuario ya existe"
+}
+```
+
+## Respuesta si la contraseña tiene menos de 6 caracteres
+
+```json
+{
+  "row": 2,
+  "email": "ana@gmail.com",
+  "message": "La contraseña debe tener mínimo 6 caracteres"
+}
+```
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al procesar la carga masiva de usuarios"
+}
+```
+
+---
+
 # Obtener usuarios
 
 ## Endpoint protegido para ADMIN
@@ -1707,6 +2010,7 @@ Content-Type: application/json
 | GET | /api/health | Verifica el funcionamiento de la API | Público |
 | GET | /api/users | Obtiene todos los usuarios registrados | ADMIN |
 | POST | /api/users/register | Registra un nuevo usuario | Público |
+| POST | /api/auth/register/bulk | Registra usuarios mediante carga masiva desde Excel | ADMIN |
 | POST | /api/users/login | Inicia sesión y genera token JWT | Público |
 | GET | /api/profile | Obtiene el perfil del usuario autenticado | Usuario autenticado |
 | POST | /api/pqrs | Crea una nueva PQR | USER / ADMIN |

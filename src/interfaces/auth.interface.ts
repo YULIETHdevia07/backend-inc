@@ -1,3 +1,4 @@
+import type { Role } from "@prisma/client";
 import type { Request } from "express";
 
 export interface AuthRequest extends Request {
@@ -20,6 +21,7 @@ export interface BulkRegisterUserData {
   name: string;
   email: string;
   password: string;
+  role: Role;
 }
 
 // Información de errores encontrados durante la carga masiva.

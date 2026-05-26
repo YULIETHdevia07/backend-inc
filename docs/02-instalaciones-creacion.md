@@ -231,3 +231,55 @@ Esto permite:
 - Validación de tipos
 - Mejor soporte en el editor
 - Integración correcta con TypeScript
+
+---
+
+# 12. Instalación de dependencias para carga masiva de usuarios
+
+## Instalación de Multer y XLSX
+
+### Comando ejecutado
+
+```bash
+npm install multer xlsx
+```
+
+### Descripción
+
+Se instalaron las dependencias necesarias para implementar la carga masiva de usuarios mediante archivos Excel.
+
+Estas dependencias permiten recibir, leer y procesar archivos enviados desde Postman o desde el frontend.
+
+### Dependencias instaladas
+
+| Dependencia | Descripción |
+|---|---|
+| multer | Middleware de Express utilizado para recibir archivos enviados mediante `multipart/form-data` |
+| xlsx | Librería utilizada para leer archivos Excel y convertir sus hojas en datos procesables por el backend |
+
+---
+
+## Instalación de tipados para Multer
+
+### Comando ejecutado
+
+```bash
+npm install -D @types/multer
+```
+
+### Descripción
+
+Se instalaron los tipados de TypeScript para `multer`.
+
+Esto permite:
+
+- Usar `req.file` con soporte de TypeScript
+- Validar correctamente los tipos del archivo recibido
+- Obtener autocompletado en el editor
+- Evitar errores de tipado durante el desarrollo
+
+---
+
+## Uso dentro del proyecto
+
+Estas dependencias se utilizan en la funcionalidad de carga masiva de usuarios.
