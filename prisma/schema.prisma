@@ -59,7 +59,7 @@ model PQR {
   assignedToId Int?
   assignedTo   User? @relation("AgentPqrs", fields: [assignedToId], references: [id])
 
-  priority PqrPriority @default(MEDIA)
+  priority PqrPriority?
 
   //campos para calificación
   rating        Int?
