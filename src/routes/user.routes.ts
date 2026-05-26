@@ -15,9 +15,6 @@ router.get("/", authMiddleware, roleMiddleware(["ADMIN"]), getUsers);
 
 router.patch("/:id/role", authMiddleware, roleMiddleware(["ADMIN"]), updateUserRole);
 
-
-router.post("/register", registerUser);
-
 router.post("/login", loginUser);
 
 export default router;
