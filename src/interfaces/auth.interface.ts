@@ -24,9 +24,15 @@ export interface BulkRegisterUserData {
   role: Role;
 }
 
-// Información de errores encontrados durante la carga masiva.
+// Detalle de un error encontrado en una columna del archivo.
+export interface BulkRegisterUserColumnError {
+  column: string;
+  message: string;
+}
+
+// Información de errores encontrados en una fila durante la carga masiva.
 export interface BulkRegisterUserError {
   row: number;
-  email?: string;
-  message: string;
+  totalErrors: number;
+  errors: BulkRegisterUserColumnError[];
 }

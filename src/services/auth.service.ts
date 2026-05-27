@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Role } from "@prisma/client";
 import prisma from "../../prisma/client.js";
 import type {
+  BulkRegisterUserColumnError,
   BulkRegisterUserData,
   BulkRegisterUserError,
   RegisterUserData,
@@ -14,7 +15,7 @@ export const registerUserService = async ({
   email,
   password,
 }: RegisterUserData) => {
-  // Limpia espacios y normaliza los datos
+  // Limpia espacios y normaliza los datos.
   const cleanName = name?.trim();
   const cleanEmail = email?.trim().toLowerCase();
   const cleanPassword = password?.trim();
@@ -24,9 +25,7 @@ export const registerUserService = async ({
   }
 
   if (!isValidName(cleanName)) {
-    throw new Error(
-      "El nombre solo puede contener letras"
-    );
+    throw new Error("El nombre solo puede contener letras");
   }
 
   if (cleanName.length < 3) {
@@ -61,7 +60,7 @@ export const registerUserService = async ({
     },
   });
 
-  // Retira la contraseña antes de responder
+  // Retira la contraseña antes de responder.
   const { password: _, ...userWithoutPassword } = user;
 
   return userWithoutPassword;
@@ -98,6 +97,14 @@ const validateBulkUserColumns = (sheet: XLSX.WorkSheet) => {
   }
 };
 
+// Calcula la cantidad real de errores encontrados en el archivo.
+const getTotalBulkErrors = (errors: BulkRegisterUserError[]) => {
+  return errors.reduce(
+    (total, error) => total + error.totalErrors,
+    0
+  );
+};
+
 // Permite registrar usuarios mediante carga masiva desde un archivo Excel.
 export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   const workbook = XLSX.read(fileBuffer, {
@@ -129,91 +136,112 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   }
 
   const errors: BulkRegisterUserError[] = [];
-  const validUsers: BulkRegisterUserData[] = [];
+  const validUsers: Array<BulkRegisterUserData & { rowNumber: number }> = [];
   const emailsInFile = new Set<string>();
 
   // Primera fase: valida todo el archivo antes de registrar.
   for (const [index, userData] of users.entries()) {
     const rowNumber = index + 2;
+    const rowErrors: BulkRegisterUserColumnError[] = [];
 
     const cleanName = userData.name?.trim();
     const cleanEmail = userData.email?.trim().toLowerCase();
     const password = String(userData.password ?? "");
     const role = String(userData.role ?? "").trim().toUpperCase() as Role;
 
-    // Valida que la fila tenga todos los campos requeridos.
-    if (!cleanName || !cleanEmail || !password || !role) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
-        message: "Todos los campos son obligatorios",
+    // Valida campos obligatorios por columna.
+    if (!cleanName) {
+      rowErrors.push({
+        column: "name",
+        message: "El nombre es obligatorio",
       });
-      continue;
     }
 
-    // Valida que el nombre solo contenga letras permitidas.
-    if (!isValidName(cleanName)) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
+    if (!cleanEmail) {
+      rowErrors.push({
+        column: "email",
+        message: "El correo electrónico es obligatorio",
+      });
+    }
+
+    if (!password) {
+      rowErrors.push({
+        column: "password",
+        message: "La contraseña es obligatoria",
+      });
+    }
+
+    if (!role) {
+      rowErrors.push({
+        column: "role",
+        message: "El rol es obligatorio",
+      });
+    }
+
+    // Valida nombre solo si fue enviado.
+    if (cleanName && !isValidName(cleanName)) {
+      rowErrors.push({
+        column: "name",
         message: "El nombre solo puede contener letras, espacios, tildes y ñ",
       });
-      continue;
     }
 
-    // Valida la longitud mínima del nombre.
-    if (cleanName.length < 3) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
+    if (cleanName && cleanName.length < 3) {
+      rowErrors.push({
+        column: "name",
         message: "El nombre debe tener mínimo 3 caracteres",
       });
-      continue;
     }
 
-    // Valida el formato del correo electrónico.
-    if (!isValidEmail(cleanEmail)) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
+    // Valida correo solo si fue enviado.
+    if (cleanEmail && !isValidEmail(cleanEmail)) {
+      rowErrors.push({
+        column: "email",
         message: "El correo electrónico no tiene un formato válido",
       });
-      continue;
     }
 
-    // Valida la longitud mínima de la contraseña sin modificarla.
-    if (password.length < 6) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
+    // Valida contraseña solo si fue enviada.
+    if (password && password.length < 6) {
+      rowErrors.push({
+        column: "password",
         message: "La contraseña debe tener mínimo 6 caracteres",
       });
-      continue;
     }
 
-    // Valida que el rol enviado sea válido.
-    if (!Object.values(Role).includes(role)) {
-      errors.push({
-        row: rowNumber,
-        email: cleanEmail,
+    // Valida rol solo si fue enviado.
+    if (role && !Object.values(Role).includes(role)) {
+      rowErrors.push({
+        column: "role",
         message: "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT",
       });
-      continue;
     }
 
-    // Valida que el correo no esté repetido dentro del mismo archivo.
-    if (emailsInFile.has(cleanEmail)) {
+    // Valida correo duplicado solo si el correo tiene formato válido.
+    if (cleanEmail && isValidEmail(cleanEmail)) {
+      if (emailsInFile.has(cleanEmail)) {
+        rowErrors.push({
+          column: "email",
+          message: "Correo duplicado dentro del archivo",
+        });
+      } else {
+        emailsInFile.add(cleanEmail);
+      }
+    }
+
+    // Si la fila tiene errores, agrega fila, cantidad, columna y mensaje.
+    if (rowErrors.length > 0) {
       errors.push({
         row: rowNumber,
-        email: cleanEmail,
-        message: "Correo duplicado dentro del archivo",
+        totalErrors: rowErrors.length,
+        errors: rowErrors,
       });
+
       continue;
     }
 
-    emailsInFile.add(cleanEmail);
-
     validUsers.push({
+      rowNumber,
       name: cleanName,
       email: cleanEmail,
       password,
@@ -226,10 +254,11 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     return {
       totalRows: users.length,
       totalCreated: 0,
-      totalErrors: errors.length,
+      totalRowsWithErrors: errors.length,
+      totalErrors: getTotalBulkErrors(errors),
       createdUsers: [],
       errors,
-      message: "El archivo contiene errores. No se registró ningún usuario.",
+      message: "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
     };
   }
 
@@ -250,12 +279,17 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   );
 
   // Valida usuarios existentes en base de datos.
-  validUsers.forEach((user, index) => {
+  validUsers.forEach((user) => {
     if (existingEmails.has(user.email)) {
       errors.push({
-        row: index + 2,
-        email: user.email,
-        message: "El usuario ya existe",
+        row: user.rowNumber,
+        totalErrors: 1,
+        errors: [
+          {
+            column: "email",
+            message: "El usuario ya existe",
+          },
+        ],
       });
     }
   });
@@ -265,10 +299,11 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     return {
       totalRows: users.length,
       totalCreated: 0,
-      totalErrors: errors.length,
+      totalRowsWithErrors: errors.length,
+      totalErrors: getTotalBulkErrors(errors),
       createdUsers: [],
       errors,
-      message: "El archivo contiene errores. No se registró ningún usuario.",
+      message: "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
     };
   }
 
@@ -309,6 +344,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   return {
     totalRows: users.length,
     totalCreated: createdUsers.length,
+    totalRowsWithErrors: 0,
     totalErrors: 0,
     createdUsers,
     errors: [],

@@ -212,17 +212,17 @@ name | email | role | password
 
 ### Ejemplo
 
-| name | email | role | password |
-|---|---|---|---|
-| Juan Pérez | juan@gmail.com | USER | 123456 |
-| Ana María | ana@gmail.com | AGENT | 123456 |
-| José Peña | jose@gmail.com | ADMIN | 123456 |
+| name       | email          | role  | password |
+| ---------- | -------------- | ----- | -------- |
+| Juan Pérez | juan@gmail.com | USER  | 123456   |
+| Ana María  | ana@gmail.com  | AGENT | 123456   |
+| José Peña  | jose@gmail.com | ADMIN | 123456   |
 
 ## Campo requerido
 
-| Campo | Tipo | Obligatorio | Descripción |
-|---|---|---|---|
-| file | File | Sí | Archivo Excel con los usuarios a registrar |
+| Campo | Tipo | Obligatorio | Descripción                                |
+| ----- | ---- | ----------- | ------------------------------------------ |
+| file  | File | Sí          | Archivo Excel con los usuarios a registrar |
 
 ## Ejemplo en Postman
 
@@ -285,35 +285,30 @@ AGENT
 ## Respuesta exitosa
 
 ```json
-{
-  "message": "Carga masiva procesada correctamente",
-  "result": {
-    "totalRows": 3,
-    "totalCreated": 3,
-    "totalErrors": 0,
-    "createdUsers": [
-      {
-        "id": 13,
-        "name": "Juan Pérez",
-        "email": "juan@gmail.com",
-        "role": "USER"
-      },
-      {
-        "id": 14,
-        "name": "Ana María",
-        "email": "ana@gmail.com",
-        "role": "AGENT"
-      },
-      {
-        "id": 15,
-        "name": "José Peña",
-        "email": "jose@gmail.com",
-        "role": "ADMIN"
-      }
-    ],
-    "errors": [],
-    "message": "Todos los usuarios fueron registrados correctamente."
-  }
+ {
+    "message": "Carga masiva procesada correctamente",
+    "result": {
+        "totalRows": 2,
+        "totalCreated": 2,
+        "totalRowsWithErrors": 0,
+        "totalErrors": 0,
+        "createdUsers": [
+            {
+                "id": 32,
+                "name": "lolauno",
+                "email": "louno@gmail.com",
+                "role": "USER"
+            },
+            {
+                "id": 31,
+                "name": "pello",
+                "email": "pellouno@gmail.com",
+                "role": "AGENT"
+            }
+        ],
+        "errors": [],
+        "message": "Todos los usuarios fueron registrados correctamente."
+    }
 }
 ```
 
@@ -325,21 +320,37 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "message": "Carga masiva procesada correctamente",
-  "result": {
-    "totalRows": 3,
-    "totalCreated": 0,
-    "totalErrors": 1,
-    "createdUsers": [],
-    "errors": [
-      {
-        "row": 2,
-        "email": "juan@gmail.com",
-        "message": "El usuario ya existe"
-      }
-    ],
-    "message": "El archivo contiene errores. No se registró ningún usuario."
-  }
+    "message": "Carga masiva procesada correctamente",
+    "result": {
+        "totalRows": 2,
+        "totalCreated": 0,
+        "totalRowsWithErrors": 2,
+        "totalErrors": 2,
+        "createdUsers": [],
+        "errors": [
+            {
+                "row": 2,
+                "totalErrors": 1,
+                "errors": [
+                    {
+                        "column": "email",
+                        "message": "El usuario ya existe"
+                    }
+                ]
+            },
+            {
+                "row": 3,
+                "totalErrors": 1,
+                "errors": [
+                    {
+                        "column": "email",
+                        "message": "El usuario ya existe"
+                    }
+                ]
+            }
+        ],
+        "message": "El archivo contiene errores. Corrige la información y vuelve a subirlo."
+    }
 }
 ```
 
@@ -413,9 +424,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 2,
-  "email": "juan@gmail.com",
-  "message": "El nombre solo puede contener letras"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "name",
+    "message": "El nombre solo puede contener letras"
+  }
+]
 }
 ```
 
@@ -423,9 +439,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 2,
-  "email": "juan",
-  "message": "El correo electrónico no tiene un formato válido"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "email",
+    "message": "El correo electrónico no tiene un formato válido"
+  }
+]
 }
 ```
 
@@ -433,9 +454,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 2,
-  "email": "juan@gmail.com",
-  "message": "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "role",
+    "message": "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT"
+  }
+]
 }
 ```
 
@@ -443,9 +469,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 3,
-  "email": "juan@gmail.com",
-  "message": "Correo duplicado dentro del archivo"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "email",
+    "message": "Correo duplicado dentro del archivo"
+  }
+]
 }
 ```
 
@@ -453,9 +484,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 2,
-  "email": "juan@gmail.com",
-  "message": "El usuario ya existe"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "email",
+    "message": "El usuario ya existe"
+  }
+]
 }
 ```
 
@@ -463,9 +499,14 @@ Si la carga masiva está configurada como proceso completo, no se registra ning�
 
 ```json
 {
-  "row": 2,
-  "email": "ana@gmail.com",
-  "message": "La contraseña debe tener mínimo 6 caracteres"
+"row": 3,
+"totalErrors": 1,
+"errors": [
+  {
+    "column": "password",
+    "message": "La contraseña debe tener mínimo 6 caracteres"
+  }
+]
 }
 ```
 
@@ -601,9 +642,9 @@ Authorization: Bearer TOKEN_ADMIN
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador del usuario al que se le desea cambiar el rol |
+| Parámetro | Tipo   | Descripción                                                 |
+| --------- | ------ | ----------------------------------------------------------- |
+| id        | number | Identificador del usuario al que se le desea cambiar el rol |
 
 ---
 
@@ -1118,9 +1159,9 @@ Content-Type: application/json
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador de la PQR que se desea actualizar |
+| Parámetro | Tipo   | Descripción                                     |
+| --------- | ------ | ----------------------------------------------- |
+| id        | number | Identificador de la PQR que se desea actualizar |
 
 ---
 
@@ -1257,9 +1298,9 @@ Content-Type: application/json
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador de la PQR que se desea responder |
+| Parámetro | Tipo   | Descripción                                    |
+| --------- | ------ | ---------------------------------------------- |
+| id        | number | Identificador de la PQR que se desea responder |
 
 ---
 
@@ -1459,9 +1500,9 @@ Authorization: Bearer TOKEN_AGENT
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador de la PQR que el agente desea tomar |
+| Parámetro | Tipo   | Descripción                                       |
+| --------- | ------ | ------------------------------------------------- |
+| id        | number | Identificador de la PQR que el agente desea tomar |
 
 ---
 
@@ -1684,9 +1725,9 @@ Content-Type: application/json
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador de la PQR a la que se desea cambiar la prioridad |
+| Parámetro | Tipo   | Descripción                                                    |
+| --------- | ------ | -------------------------------------------------------------- |
+| id        | number | Identificador de la PQR a la que se desea cambiar la prioridad |
 
 ---
 
@@ -1862,9 +1903,9 @@ Content-Type: application/json
 
 ## Parámetros
 
-| Parámetro | Tipo | Descripción |
-|---|---|---|
-| id | number | Identificador de la PQR que se desea calificar |
+| Parámetro | Tipo   | Descripción                                    |
+| --------- | ------ | ---------------------------------------------- |
+| id        | number | Identificador de la PQR que se desea calificar |
 
 ---
 
@@ -1881,10 +1922,10 @@ Content-Type: application/json
 
 ## Campos del body
 
-| Campo | Tipo | Obligatorio | Descripción |
-|---|---|---|---|
-| rating | number | Sí | Calificación asignada por el usuario. Debe estar entre 1 y 5 |
-| ratingComment | string | No | Comentario opcional sobre la atención recibida. Máximo 300 caracteres |
+| Campo         | Tipo   | Obligatorio | Descripción                                                           |
+| ------------- | ------ | ----------- | --------------------------------------------------------------------- |
+| rating        | number | Sí          | Calificación asignada por el usuario. Debe estar entre 1 y 5          |
+| ratingComment | string | No          | Comentario opcional sobre la atención recibida. Máximo 300 caracteres |
 
 ---
 
@@ -2005,25 +2046,25 @@ Content-Type: application/json
 
 # Resumen actualizado de endpoints funcionales
 
-| Método | Endpoint | Descripción | Acceso |
-|---|---|---|---|
-| GET | /api/health | Verifica el funcionamiento de la API | Público |
-| GET | /api/users | Obtiene todos los usuarios registrados | ADMIN |
-| POST | /api/users/register | Registra un nuevo usuario | Público |
-| POST | /api/auth/register/bulk | Registra usuarios mediante carga masiva desde Excel | ADMIN |
-| POST | /api/users/login | Inicia sesión y genera token JWT | Público |
-| GET | /api/profile | Obtiene el perfil del usuario autenticado | Usuario autenticado |
-| POST | /api/pqrs | Crea una nueva PQR | USER / ADMIN |
-| GET | /api/pqrs/my | Obtiene las PQR del usuario autenticado | USER / ADMIN |
-| GET | /api/pqrs | Obtiene todas las PQR del sistema | ADMIN |
-| GET | /api/pqrs/available | Obtiene las PQR pendientes sin responsable | ADMIN / AGENT |
-| GET | /api/pqrs/assigned/my | Obtiene las PQR asignadas al AGENT autenticado | ADMIN / AGENT |
-| PATCH | /api/pqrs/:id/take | Permite que un AGENT tome una PQR disponible | ADMIN / AGENT |
-| PATCH | /api/pqrs/:id/status | Cambia el estado de una PQR | ADMIN |
-| PATCH | /api/pqrs/:id/respond | Responde una PQR | ADMIN |
-| PATCH | /api/users/:id/role | Cambia el rol de un usuario | ADMIN |
-| PATCH | /api/pqrs/:id/priority | Cambia la prioridad de una PQR | ADMIN / AGENT |
-| PATCH | /api/pqrs/:id/rate | Permite calificar una PQR cerrada | USER |
+| Método | Endpoint                | Descripción                                         | Acceso              |
+| ------ | ----------------------- | --------------------------------------------------- | ------------------- |
+| GET    | /api/health             | Verifica el funcionamiento de la API                | Público             |
+| GET    | /api/users              | Obtiene todos los usuarios registrados              | ADMIN               |
+| POST   | /api/users/register     | Registra un nuevo usuario                           | Público             |
+| POST   | /api/auth/register/bulk | Registra usuarios mediante carga masiva desde Excel | ADMIN               |
+| POST   | /api/users/login        | Inicia sesión y genera token JWT                    | Público             |
+| GET    | /api/profile            | Obtiene el perfil del usuario autenticado           | Usuario autenticado |
+| POST   | /api/pqrs               | Crea una nueva PQR                                  | USER / ADMIN        |
+| GET    | /api/pqrs/my            | Obtiene las PQR del usuario autenticado             | USER / ADMIN        |
+| GET    | /api/pqrs               | Obtiene todas las PQR del sistema                   | ADMIN               |
+| GET    | /api/pqrs/available     | Obtiene las PQR pendientes sin responsable          | ADMIN / AGENT       |
+| GET    | /api/pqrs/assigned/my   | Obtiene las PQR asignadas al AGENT autenticado      | ADMIN / AGENT       |
+| PATCH  | /api/pqrs/:id/take      | Permite que un AGENT tome una PQR disponible        | ADMIN / AGENT       |
+| PATCH  | /api/pqrs/:id/status    | Cambia el estado de una PQR                         | ADMIN               |
+| PATCH  | /api/pqrs/:id/respond   | Responde una PQR                                    | ADMIN               |
+| PATCH  | /api/users/:id/role     | Cambia el rol de un usuario                         | ADMIN               |
+| PATCH  | /api/pqrs/:id/priority  | Cambia la prioridad de una PQR                      | ADMIN / AGENT       |
+| PATCH  | /api/pqrs/:id/rate      | Permite calificar una PQR cerrada                   | USER                |
 ```
 
 ---
