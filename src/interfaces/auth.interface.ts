@@ -18,10 +18,10 @@ export interface RegisterUserData {
 
 // Datos esperados en cada fila del archivo de carga masiva.
 export interface BulkRegisterUserData {
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
+  nombre: string;
+  correo: string;
+  contraseña: string;
+  rol: Role;
 }
 
 // Detalle de un error encontrado en una columna del archivo.

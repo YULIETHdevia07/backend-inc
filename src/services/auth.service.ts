@@ -2,12 +2,14 @@ import bcrypt from "bcryptjs";
 import * as XLSX from "xlsx";
 import { Role } from "@prisma/client";
 import prisma from "../../prisma/client.js";
+
 import type {
   BulkRegisterUserColumnError,
   BulkRegisterUserData,
   BulkRegisterUserError,
   RegisterUserData,
 } from "../interfaces/auth.interface.js";
+
 import { isValidEmail, isValidName } from "../utils/validators.js";
 
 export const registerUserService = async ({
@@ -82,7 +84,7 @@ const validateBulkUserColumns = (sheet: XLSX.WorkSheet) => {
     String(header).trim().toLowerCase()
   );
 
-  const requiredColumns = ["name", "email", "password", "role"];
+  const requiredColumns = ["nombre", "correo", "contraseña", "rol"];
 
   const missingColumns = requiredColumns.filter(
     (column) => !normalizedHeaders.includes(column)
@@ -92,7 +94,7 @@ const validateBulkUserColumns = (sheet: XLSX.WorkSheet) => {
     throw new Error(
       `El archivo Excel no tiene las columnas requeridas: ${missingColumns.join(
         ", "
-      )}. Las columnas obligatorias son: name, email, password y role.`
+      )}. Las columnas obligatorias son: nombre, correo, contraseña y rol.`
     );
   }
 };
@@ -144,36 +146,36 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     const rowNumber = index + 2;
     const rowErrors: BulkRegisterUserColumnError[] = [];
 
-    const cleanName = userData.name?.trim();
-    const cleanEmail = userData.email?.trim().toLowerCase();
-    const password = String(userData.password ?? "");
-    const role = String(userData.role ?? "").trim().toUpperCase() as Role;
+    const cleanName = userData.nombre?.trim();
+    const cleanEmail = userData.correo?.trim().toLowerCase();
+    const password = String(userData.contraseña ?? "");
+    const role = String(userData.rol ?? "").trim().toUpperCase() as Role;
 
     // Valida campos obligatorios por columna.
     if (!cleanName) {
       rowErrors.push({
-        column: "name",
+        column: "nombre",
         message: "El nombre es obligatorio",
       });
     }
 
     if (!cleanEmail) {
       rowErrors.push({
-        column: "email",
+        column: "correo",
         message: "El correo electrónico es obligatorio",
       });
     }
 
     if (!password) {
       rowErrors.push({
-        column: "password",
+        column: "contraseña",
         message: "La contraseña es obligatoria",
       });
     }
 
     if (!role) {
       rowErrors.push({
-        column: "role",
+        column: "rol",
         message: "El rol es obligatorio",
       });
     }
@@ -181,14 +183,14 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     // Valida nombre solo si fue enviado.
     if (cleanName && !isValidName(cleanName)) {
       rowErrors.push({
-        column: "name",
-        message: "El nombre solo puede contener letras, espacios, tildes y ñ",
+        column: "nombre",
+        message: "El nombre solo puede contener letras",
       });
     }
 
     if (cleanName && cleanName.length < 3) {
       rowErrors.push({
-        column: "name",
+        column: "nombre",
         message: "El nombre debe tener mínimo 3 caracteres",
       });
     }
@@ -196,7 +198,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     // Valida correo solo si fue enviado.
     if (cleanEmail && !isValidEmail(cleanEmail)) {
       rowErrors.push({
-        column: "email",
+        column: "correo",
         message: "El correo electrónico no tiene un formato válido",
       });
     }
@@ -204,7 +206,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     // Valida contraseña solo si fue enviada.
     if (password && password.length < 6) {
       rowErrors.push({
-        column: "password",
+        column: "contraseña",
         message: "La contraseña debe tener mínimo 6 caracteres",
       });
     }
@@ -212,7 +214,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     // Valida rol solo si fue enviado.
     if (role && !Object.values(Role).includes(role)) {
       rowErrors.push({
-        column: "role",
+        column: "rol",
         message: "Rol no válido. Los roles permitidos son USER, ADMIN y AGENT",
       });
     }
@@ -221,7 +223,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     if (cleanEmail && isValidEmail(cleanEmail)) {
       if (emailsInFile.has(cleanEmail)) {
         rowErrors.push({
-          column: "email",
+          column: "correo",
           message: "Correo duplicado dentro del archivo",
         });
       } else {
@@ -240,12 +242,13 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       continue;
     }
 
+    // Se guardan internamente con nombres en inglés porque Prisma usa esos campos.
     validUsers.push({
       rowNumber,
-      name: cleanName,
-      email: cleanEmail,
-      password,
-      role,
+      nombre: cleanName,
+      correo: cleanEmail,
+      contraseña: password,
+      rol: role,
     });
   }
 
@@ -258,7 +261,8 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       totalErrors: getTotalBulkErrors(errors),
       createdUsers: [],
       errors,
-      message: "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
+      message:
+        "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
     };
   }
 
@@ -266,7 +270,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   const existingUsers = await prisma.user.findMany({
     where: {
       email: {
-        in: validUsers.map((user) => user.email),
+        in: validUsers.map((user) => user.correo),
       },
     },
     select: {
@@ -274,19 +278,17 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
     },
   });
 
-  const existingEmails = new Set(
-    existingUsers.map((user) => user.email)
-  );
+  const existingEmails = new Set(existingUsers.map((user) => user.email));
 
   // Valida usuarios existentes en base de datos.
   validUsers.forEach((user) => {
-    if (existingEmails.has(user.email)) {
+    if (existingEmails.has(user.correo)) {
       errors.push({
         row: user.rowNumber,
         totalErrors: 1,
         errors: [
           {
-            column: "email",
+            column: "correo",
             message: "El usuario ya existe",
           },
         ],
@@ -303,20 +305,21 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
       totalErrors: getTotalBulkErrors(errors),
       createdUsers: [],
       errors,
-      message: "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
+      message:
+        "El archivo contiene errores. Corrige la información y vuelve a subirlo.",
     };
   }
 
   // Segunda fase: si todo está correcto, prepara los usuarios.
   const usersToCreate = await Promise.all(
     validUsers.map(async (user) => {
-      const hashedPassword = await bcrypt.hash(user.password, 10);
+      const hashedPassword = await bcrypt.hash(user.contraseña, 10);
 
       return {
-        name: user.name,
-        email: user.email,
+        name: user.nombre,
+        email: user.correo,
         password: hashedPassword,
-        role: user.role,
+        role: user.rol,
       };
     })
   );
@@ -330,7 +333,7 @@ export const registerUsersBulkService = async (fileBuffer: Buffer) => {
   const createdUsers = await prisma.user.findMany({
     where: {
       email: {
-        in: validUsers.map((user) => user.email),
+        in: validUsers.map((user) => user.correo),
       },
     },
     select: {
