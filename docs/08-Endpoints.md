@@ -31,7 +31,7 @@ Endpoint utilizado para verificar el correcto funcionamiento de la API.
 ## Endpoint
 
 ```http
-POST /api/users/register
+POST /api/auth/register
 ```
 
 ## Descripción
