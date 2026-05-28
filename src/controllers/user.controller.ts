@@ -2,7 +2,7 @@ import { getAllUsersService, getUserByIdService, updateUserRoleService } from ".
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "../config/prisma/client.js";
+import prisma from "../config/client.js";
 
 export const getUsers = async (
   req: Request,

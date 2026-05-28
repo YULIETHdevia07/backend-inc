@@ -4,7 +4,6 @@ import {
   getAllPqrs,
   getMyPqrs,
   updatePqrStatus,
-  respondPqr,
   getAvailablePqrsController,
   getMyAssignedPqrsController,
   takePqrController,
@@ -17,14 +16,16 @@ import { roleMiddleware } from "../middlewares/role.middleware.js";
 const router = Router();
 
 router.post("/", authMiddleware, createPqr);
+
 router.get("/my", authMiddleware, getMyPqrs);
-// Admin 
+
 router.get(
   "/",
   authMiddleware,
   roleMiddleware(["ADMIN"]),
   getAllPqrs
 );
+
 router.patch(
   "/:id/status",
   authMiddleware,
@@ -44,13 +45,6 @@ router.patch(
   authMiddleware,
   roleMiddleware(["USER"]),
   ratePqrController
-);
-
-router.patch(
-  "/:id/respond",
-  authMiddleware,
-  roleMiddleware(["ADMIN", "AGENT"]),
-  respondPqr
 );
 
 router.get(

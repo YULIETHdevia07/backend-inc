@@ -1,5 +1,6 @@
 import type { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import type { Role } from "@prisma/client";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 
 export const authMiddleware = (
@@ -30,7 +31,7 @@ export const authMiddleware = (
     ) as {
       id: number;
       email: string;
-      role: string;
+      role: Role;
     };
 
     req.user = decoded;

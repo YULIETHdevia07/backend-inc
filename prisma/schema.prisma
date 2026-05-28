@@ -42,6 +42,8 @@ model User {
 
   pqrsCreated  PQR[] @relation("UserPqrs")
   pqrsAssigned PQR[] @relation("AgentPqrs")
+
+  pqrMessages PqrMessage[]
 }
 
 model PQR {
@@ -49,7 +51,6 @@ model PQR {
   caseType    PqrCaseType
   description String      @db.VarChar(500)
   status      PqrStatus   @default(PENDIENTE)
-  response    String?     @db.VarChar(500)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -65,4 +66,18 @@ model PQR {
   rating        Int?
   ratingComment String?   @db.VarChar(300)
   ratedAt       DateTime?
+
+  messages PqrMessage[]
+}
+
+model PqrMessage {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+
+  pqrId Int
+  pqr   PQR @relation(fields: [pqrId], references: [id], onDelete: Cascade)
+
+  senderId Int
+  sender   User @relation(fields: [senderId], references: [id])
 }

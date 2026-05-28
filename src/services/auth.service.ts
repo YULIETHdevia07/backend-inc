@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import * as XLSX from "xlsx";
 import { Role } from "@prisma/client";
-import prisma from "../config/prisma/client.js";
+import prisma from "../config/client.js";
 
 import type {
   BulkRegisterUserColumnError,

@@ -1,4 +1,4 @@
-import prisma from "../config/prisma/client.js";
+import prisma from "../config/client.js";
 import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
 import { PqrPriority, PqrStatus } from "@prisma/client";
 
@@ -87,21 +87,6 @@ export const updatePqrStatusService = async (
   return pqr;
 };
 
-export const respondPqrService = async (
-  id: number,
-  response: string
-) => {
-  const pqr = await prisma.pQR.update({
-    where: {
-      id,
-    },
-    data: {
-      response,
-    },
-  });
-
-  return pqr;
-};
 
 // Obtiene las PQR que todavía no tienen responsable asignado
 export const getAvailablePqrsService = async () => {
