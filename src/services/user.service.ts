@@ -1,4 +1,4 @@
-import prisma from "../../prisma/client.js";
+import prisma from "../config/prisma/client.js";
 import { Role } from "@prisma/client";
 
 export const getAllUsersService = async () => {

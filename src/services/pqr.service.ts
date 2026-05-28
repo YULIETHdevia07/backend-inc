@@ -1,4 +1,4 @@
-import prisma from "../../prisma/client.js";
+import prisma from "../config/prisma/client.js";
 import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
 import { PqrPriority, PqrStatus } from "@prisma/client";
 
