@@ -280,6 +280,78 @@ Esto permite:
 
 ---
 
+# 13. Instalación de Socket.IO
+
+## Comando ejecutado
+
+```bash
+npm install socket.io
+```
+
+## Descripción
+
+Se instaló la dependencia `socket.io`, utilizada para implementar comunicación en tiempo real entre el backend y el frontend.
+
+En el sistema de PQR, Socket.IO permite que los usuarios, agentes y administradores puedan enviar y recibir mensajes dentro del chat de una PQR sin necesidad de recargar la página.
+
+## Dependencia instalada
+
+| Dependencia | Descripción                                                                    |
+| ----------- | ------------------------------------------------------------------------------ |
+| socket.io   | Librería utilizada para habilitar comunicación en tiempo real mediante eventos |
+
+---
+
 ## Uso dentro del proyecto
 
-Estas dependencias se utilizan en la funcionalidad de carga masiva de usuarios.
+Socket.IO se utiliza en el módulo de chat de PQR para:
+
+* Conectar usuarios autenticados mediante JWT.
+* Permitir que un usuario se una a la sala de una PQR específica.
+* Enviar mensajes en tiempo real.
+* Recibir mensajes nuevos automáticamente.
+* Mantener la conversación separada por cada PQR.
+* Emitir errores de autenticación, permisos o validación.
+
+---
+
+# 14. Instalación de Socket.IO Client para pruebas
+
+## Comando ejecutado
+
+```bash
+npm install -D socket.io-client
+```
+
+## Descripción
+
+Se instaló `socket.io-client` como dependencia de desarrollo para realizar pruebas temporales de conexión con Socket.IO desde el backend.
+
+Esta dependencia permite simular un cliente conectado al socket sin necesidad de tener aún implementado el frontend.
+
+## Dependencia instalada
+
+| Dependencia      | Descripción                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| socket.io-client | Cliente de Socket.IO utilizado para probar la conexión en tiempo real |
+
+---
+
+## Uso dentro del proyecto
+
+Esta dependencia se utilizó para crear un archivo temporal de prueba llamado:
+
+```txt
+test-socket.ts
+```
+
+El archivo permite validar:
+
+* Conexión al socket.
+* Envío del token JWT.
+* Unión a una sala de PQR.
+* Envío de mensajes.
+* Recepción de mensajes en tiempo real.
+* Manejo de errores del socket.
+
+---
