@@ -33,6 +33,15 @@ enum PqrPriority {
   URGENTE
 }
 
+enum NotificationType {
+  NEW_PQR
+  STATUS_CHANGE
+  PRIORITY_CHANGE
+  PQR_CLOSED
+  PQR_RATED
+  PQR_TAKEN
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -43,7 +52,8 @@ model User {
   pqrsCreated  PQR[] @relation("UserPqrs")
   pqrsAssigned PQR[] @relation("AgentPqrs")
 
-  pqrMessages PqrMessage[]
+  pqrMessages   PqrMessage[]
+  notifications Notification[]
 }
 
 model PQR {
@@ -67,7 +77,8 @@ model PQR {
   ratingComment String?   @db.VarChar(300)
   ratedAt       DateTime?
 
-  messages PqrMessage[]
+  messages      PqrMessage[]
+  notifications Notification[]
 }
 
 model PqrMessage {
@@ -80,4 +91,18 @@ model PqrMessage {
 
   senderId Int
   sender   User @relation(fields: [senderId], references: [id])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  userId    Int
+  pqrId     Int?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  pqr  PQR? @relation(fields: [pqrId], references: [id])
 }

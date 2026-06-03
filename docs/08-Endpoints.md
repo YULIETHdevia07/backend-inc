@@ -216,11 +216,11 @@ nombre | correo | contraseña | rol
 
 ### Ejemplo
 
-| name       | email                                   | contraseña | rol |
-| ---------- | --------------------------------------- | -------- | ----- |
-| Juan Pérez | [juan@gmail.com](mailto:juan@gmail.com) | 123456   | USER  |
-| Ana María  | [ana@gmail.com](mailto:ana@gmail.com)   | 123456   | AGENT |
-| José Peña  | [jose@gmail.com](mailto:jose@gmail.com) | 123456   | ADMIN |
+| name       | email                                   | contraseña | rol   |
+| ---------- | --------------------------------------- | ---------- | ----- |
+| Juan Pérez | [juan@gmail.com](mailto:juan@gmail.com) | 123456     | USER  |
+| Ana María  | [ana@gmail.com](mailto:ana@gmail.com)   | 123456     | AGENT |
+| José Peña  | [jose@gmail.com](mailto:jose@gmail.com) | 123456     | ADMIN |
 
 ---
 
@@ -863,6 +863,19 @@ OTRO
 
 ---
 
+## Notificación automática
+
+Cuando un usuario crea una nueva PQR, el sistema genera automáticamente una notificación para los usuarios con rol `ADMIN` y `AGENT`.
+
+| Destinatario | Tipo    | Mensaje                                             |
+| ------------ | ------- | --------------------------------------------------- |
+| ADMIN        | NEW_PQR | Juan Pérez (juan@gmail.com) creó una nueva PQR #10. |
+| AGENT        | NEW_PQR | Juan Pérez (juan@gmail.com) creó una nueva PQR #10. |
+
+El usuario que crea la PQR no recibe esta notificación.
+
+---
+
 ## Respuesta exitosa
 
 ```json
@@ -1136,6 +1149,19 @@ Authorization: Bearer TOKEN_AGENT
 
 ---
 
+## Notificación automática
+
+Cuando un agente toma una PQR disponible, el sistema genera automáticamente dos notificaciones.
+
+| Destinatario         | Tipo      | Mensaje                                                                                  |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| ADMIN                | PQR_TAKEN | Carlos Agente (carlos@gmail.com) tomó la PQR #10 creada por Juan Pérez (juan@gmail.com). |
+| USER dueño de la PQR | PQR_TAKEN | Tu solicitud #10 ya fue tomada por un agente.                                            |
+
+Tomar una PQR no cambia automáticamente el estado de la solicitud. Solo se actualiza el campo `assignedToId`.
+
+---
+
 ## Respuesta exitosa
 
 ```json
@@ -1145,7 +1171,7 @@ Authorization: Bearer TOKEN_AGENT
     "id": 1,
     "caseType": "SAP",
     "description": "No puedo ingresar al sistema.",
-    "status": "EN_PROCESO",
+    "status": "PENDIENTE",
     "createdAt": "2026-05-28T00:00:00.000Z",
     "updatedAt": "2026-05-28T00:00:00.000Z",
     "userId": 3,
@@ -1294,6 +1320,20 @@ Content-Type: application/json
   "status": "EN_PROCESO"
 }
 ```
+
+---
+
+## Notificación automática
+
+Cuando una PQR cambia a estado `CERRADA`, el sistema genera automáticamente una notificación para el usuario dueño de la PQR.
+
+| Destinatario         | Tipo       | Mensaje                                                                |
+| -------------------- | ---------- | ---------------------------------------------------------------------- |
+| USER dueño de la PQR | PQR_CLOSED | Tu solicitud #10 fue cerrada. Por favor califica la atención recibida. |
+
+La notificación solo se genera cuando la PQR pasa a estado `CERRADA`.
+
+Si la PQR ya estaba cerrada y se vuelve a enviar el mismo estado, no se debe crear una notificación repetida.
 
 ---
 
@@ -1698,6 +1738,19 @@ Content-Type: application/json
 
 ---
 
+## Notificación automática
+
+Cuando un usuario califica una PQR cerrada, el sistema genera automáticamente una notificación para los usuarios con rol `ADMIN` y para el `AGENT` asignado a la PQR.
+
+| Destinatario   | Tipo      | Mensaje                                                          |
+| -------------- | --------- | ---------------------------------------------------------------- |
+| ADMIN          | PQR_RATED | Juan Pérez (juan@gmail.com) calificó la PQR #10 con 5 estrellas. |
+| AGENT asignado | PQR_RATED | Juan Pérez (juan@gmail.com) calificó la PQR #10 con 5 estrellas. |
+
+Si la PQR no tiene agente asignado, la notificación solo se genera para los usuarios con rol `ADMIN`.
+
+---
+
 ## Campos del body
 
 | Campo         | Tipo   | Obligatorio | Descripción                                                           |
@@ -1821,27 +1874,313 @@ Content-Type: application/json
 
 ---
 
+# Notificaciones
+
+El backend ahora cuenta con un módulo de notificaciones internas para informar a los usuarios sobre acciones importantes relacionadas con las PQR.
+
+Las notificaciones se guardan en la base de datos y cada usuario autenticado puede consultar únicamente las notificaciones asociadas a su cuenta.
+
+---
+
+## Tipos de notificación
+
+```txt
+NEW_PQR
+STATUS_CHANGE
+PQR_CLOSED
+PQR_RATED
+PQR_TAKEN
+```
+
+| Tipo          | Descripción                                             |
+| ------------- | ------------------------------------------------------- |
+| NEW_PQR       | Se genera cuando un usuario crea una nueva PQR.         |
+| STATUS_CHANGE | Se reserva para notificar cambios de estado de una PQR. |
+| PQR_CLOSED    | Se genera cuando una PQR cambia a estado CERRADA.       |
+| PQR_RATED     | Se genera cuando un usuario califica una PQR cerrada.   |
+| PQR_TAKEN     | Se genera cuando un agente toma una PQR disponible.     |
+
+---
+
+# Obtener notificaciones del usuario autenticado
+
+## Endpoint protegido
+
+```http
+GET /api/notifications
+```
+
+## Descripción
+
+Endpoint encargado de obtener todas las notificaciones del usuario autenticado.
+
+Cada usuario solo puede consultar sus propias notificaciones.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Notificaciones obtenidas correctamente.",
+  "notifications": [
+    {
+      "id": 1,
+      "title": "Nueva PQR creada",
+      "message": "Juan Pérez (juan@gmail.com) creó una nueva PQR #10.",
+      "type": "NEW_PQR",
+      "isRead": false,
+      "userId": 2,
+      "pqrId": 10,
+      "createdAt": "2026-06-03T15:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si no tiene notificaciones
+
+```json
+{
+  "message": "Notificaciones obtenidas correctamente.",
+  "notifications": []
+}
+```
+
+---
+
+# Obtener cantidad de notificaciones no leídas
+
+## Endpoint protegido
+
+```http
+GET /api/notifications/unread-count
+```
+
+## Descripción
+
+Endpoint encargado de obtener la cantidad de notificaciones no leídas del usuario autenticado.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Cantidad de notificaciones no leídas obtenida correctamente.",
+  "count": 3
+}
+```
+
+---
+
+## Respuesta si no tiene notificaciones no leídas
+
+```json
+{
+  "message": "Cantidad de notificaciones no leídas obtenida correctamente.",
+  "count": 0
+}
+```
+
+---
+
+# Marcar una notificación como leída
+
+## Endpoint protegido
+
+```http
+PATCH /api/notifications/:id/read
+```
+
+## Ejemplo
+
+```http
+PATCH /api/notifications/1/read
+```
+
+## Descripción
+
+Endpoint encargado de marcar una notificación específica como leída.
+
+La notificación solo puede ser marcada como leída si pertenece al usuario autenticado.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                                      |
+| --------- | ------ | ---------------------------------------------------------------- |
+| id        | number | Identificador de la notificación que se desea marcar como leída. |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Notificación marcada como leída."
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la notificación no es válido."
+}
+```
+
+---
+
+## Respuesta si la notificación no existe o no pertenece al usuario
+
+```json
+{
+  "message": "La notificación no existe."
+}
+```
+
+---
+
+# Marcar todas las notificaciones como leídas
+
+## Endpoint protegido
+
+```http
+PATCH /api/notifications/read-all
+```
+
+## Descripción
+
+Endpoint encargado de marcar como leídas todas las notificaciones pendientes del usuario autenticado.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Todas las notificaciones fueron marcadas como leídas.",
+  "updatedCount": 4
+}
+```
+
+---
+
+## Respuesta si no tiene notificaciones pendientes
+
+```json
+{
+  "message": "No tienes notificaciones pendientes por leer.",
+  "updatedCount": 0
+}
+```
+
+
+---
+
 # Resumen actualizado de endpoints funcionales
 
-| Método | Endpoint                | Descripción                                         | Acceso               |
-| ------ | ----------------------- | --------------------------------------------------- | -------------------- |
-| GET    | /api/health             | Verifica el funcionamiento de la API                | Público              |
-| GET    | /api/users              | Obtiene todos los usuarios registrados              | ADMIN                |
-| POST   | /api/auth/register      | Registra un nuevo usuario                           | Público              |
-| POST   | /api/auth/register/bulk | Registra usuarios mediante carga masiva desde Excel | ADMIN                |
-| POST   | /api/auth/login         | Inicia sesión y genera token JWT                    | Público              |
-| GET    | /api/profile            | Obtiene el perfil del usuario autenticado           | Usuario autenticado  |
-| POST   | /api/pqrs               | Crea una nueva PQR                                  | USER / ADMIN         |
-| GET    | /api/pqrs/my            | Obtiene las PQR del usuario autenticado             | USER / ADMIN         |
-| GET    | /api/pqrs               | Obtiene todas las PQR del sistema                   | ADMIN                |
-| GET    | /api/pqrs/available     | Obtiene las PQR pendientes sin responsable          | ADMIN / AGENT        |
-| GET    | /api/pqrs/assigned/my   | Obtiene las PQR asignadas al AGENT autenticado      | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/take      | Permite que un AGENT tome una PQR disponible        | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/status    | Cambia el estado de una PQR                         | ADMIN / AGENT        |
-| PATCH  | /api/users/:id/role     | Cambia el rol de un usuario                         | ADMIN                |
-| PATCH  | /api/pqrs/:id/priority  | Cambia la prioridad de una PQR                      | ADMIN / AGENT        |
-| GET    | /api/pqrs/:id/messages  | Obtiene el historial de mensajes de una PQR         | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/rate      | Permite calificar una PQR cerrada                   | USER                 |
+| Método | Endpoint                        | Descripción                                         | Acceso               |
+| ------ | ------------------------------- | --------------------------------------------------- | -------------------- |
+| GET    | /api/health                     | Verifica el funcionamiento de la API                | Público              |
+| GET    | /api/users                      | Obtiene todos los usuarios registrados              | ADMIN                |
+| POST   | /api/auth/register              | Registra un nuevo usuario                           | Público              |
+| POST   | /api/auth/register/bulk         | Registra usuarios mediante carga masiva desde Excel | ADMIN                |
+| POST   | /api/auth/login                 | Inicia sesión y genera token JWT                    | Público              |
+| GET    | /api/profile                    | Obtiene el perfil del usuario autenticado           | Usuario autenticado  |
+| POST   | /api/pqrs                       | Crea una nueva PQR                                  | USER / ADMIN         |
+| GET    | /api/pqrs/my                    | Obtiene las PQR del usuario autenticado             | USER / ADMIN         |
+| GET    | /api/pqrs                       | Obtiene todas las PQR del sistema                   | ADMIN                |
+| GET    | /api/pqrs/available             | Obtiene las PQR pendientes sin responsable          | ADMIN / AGENT        |
+| GET    | /api/pqrs/assigned/my           | Obtiene las PQR asignadas al AGENT autenticado      | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/take              | Permite que un AGENT tome una PQR disponible        | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/status            | Cambia el estado de una PQR                         | ADMIN / AGENT        |
+| PATCH  | /api/users/:id/role             | Cambia el rol de un usuario                         | ADMIN                |
+| PATCH  | /api/pqrs/:id/priority          | Cambia la prioridad de una PQR                      | ADMIN / AGENT        |
+| GET    | /api/pqrs/:id/messages          | Obtiene el historial de mensajes de una PQR         | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/rate              | Permite calificar una PQR cerrada                   | USER                 |
+| GET    | /api/notifications              | Obtiene las notificaciones del usuario autenticado  | USER / ADMIN / AGENT |
+| GET    | /api/notifications/unread-count | Obtiene la cantidad de notificaciones no leídas     | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/:id/read     | Marca una notificación como leída                   | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/read-all     | Marca todas las notificaciones como leídas          | USER / ADMIN / AGENT |
 
 ---
 
@@ -1859,14 +2198,11 @@ Content-Type: application/json
 
 ---
 
-# Nota importante
+# Eventos que generan notificaciones
 
-El endpoint antiguo:
-
-```http
-PATCH /api/pqrs/:id/respond
-```
-
-fue eliminado de la documentación porque el campo `response` ya no existe en el modelo `PQR`.
-
-La respuesta única fue reemplazada por una conversación tipo chat almacenada en la tabla `PqrMessage` y transmitida en tiempo real mediante Socket.IO.
+| Acción            | Quién ejecuta | Quién recibe                 | Tipo de notificación |
+| ----------------- | ------------- | ---------------------------- | -------------------- |
+| Crear una PQR     | USER          | ADMIN y AGENT                | NEW_PQR              |
+| Tomar una PQR     | AGENT         | ADMIN y USER dueño de la PQR | PQR_TAKEN            |
+| Cerrar una PQR    | ADMIN o AGENT | USER dueño de la PQR         | PQR_CLOSED           |
+| Calificar una PQR | USER          | ADMIN y AGENT asignado       | PQR_RATED            |
