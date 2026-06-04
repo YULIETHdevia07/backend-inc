@@ -1,3 +1,5 @@
+import { getIo } from "../config/socket.js";
+import { emitNotificationToUser } from "../sockets/notification.socket.js";
 import { NotificationType, Role } from "@prisma/client";
 import prisma from "../config/client.js";
 import type { CreateNotificationData } from "../interfaces/notification.interface.js";
@@ -16,6 +18,13 @@ export const createNotificationService = async (
         },
     });
 
+    const io = getIo();
+
+    // Emite la notificación en tiempo real si el socket está activo
+    if (io) {
+        emitNotificationToUser(io, data.userId, notification);
+    }
+
     return notification;
 };
 
@@ -28,19 +37,35 @@ export const createNotificationsForUsersService = async (
         return null;
     }
 
-    const result = await prisma.notification.createMany({
-        data: userIds.map((userId) => ({
-            title: data.title,
-            message: data.message,
-            type: data.type,
-            userId,
-            pqrId: data.pqrId ?? null,
-        })),
-    });
+    const notifications = await prisma.$transaction(
+        userIds.map((userId) =>
+            prisma.notification.create({
+                data: {
+                    title: data.title,
+                    message: data.message,
+                    type: data.type,
+                    userId,
+                    pqrId: data.pqrId ?? null,
+                },
+            })
+        )
+    );
 
-    return result;
+    const io = getIo();
+
+    // Emite cada notificación al usuario correspondiente
+    if (io) {
+        notifications.forEach((notification) => {
+            emitNotificationToUser(
+                io,
+                notification.userId,
+                notification
+            );
+        });
+    }
+
+    return notifications;
 };
-
 // Obtiene los usuarios ADMIN y AGENT que deben recibir notificaciones
 export const getAdminsAndAgentsService = async () => {
     const users = await prisma.user.findMany({
