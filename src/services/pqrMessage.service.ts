@@ -1,8 +1,43 @@
 import type { Role } from "@prisma/client";
 import prisma from "../config/client.js";
-import type { CreatePqrMessageData } from "../interfaces/pqrMessage.interface.js";
+import type {
+    CreatePqrMessageData,
+    CreatePqrMessageWithAttachmentData,
+} from "../interfaces/pqrMessage.interface.js";
+import { buildPqrAttachmentData } from "./storage.service.js";
 
+// Valida si el usuario puede interactuar con la PQR.
+const validatePqrAccess = async (
+    pqrId: number,
+    userId: number,
+    userRole: Role
+) => {
+    const pqr = await prisma.pQR.findUnique({
+        where: {
+            id: pqrId,
+        },
+    });
 
+    if (!pqr) {
+        throw new Error("La PQR no existe");
+    }
+
+    if (pqr.status === "CERRADA") {
+        throw new Error("No se pueden enviar mensajes en una PQR cerrada");
+    }
+
+    if (userRole === "USER" && pqr.userId !== userId) {
+        throw new Error("Solo puedes enviar mensajes en las PQR creadas por ti");
+    }
+
+    if (userRole === "AGENT" && pqr.assignedToId !== userId) {
+        throw new Error("Solo puedes enviar mensajes en las PQR asignadas a ti");
+    }
+
+    return pqr;
+};
+
+// Crea un mensaje de texto dentro de una PQR.
 export const createPqrMessageService = async ({
     pqrId,
     senderId,
@@ -19,25 +54,7 @@ export const createPqrMessageService = async ({
         throw new Error("El mensaje no puede superar los 1000 caracteres");
     }
 
-    const pqr = await prisma.pQR.findUnique({
-        where: { id: pqrId },
-    });
-
-    if (!pqr) {
-        throw new Error("La PQR no existe");
-    }
-
-    if (pqr.status === "CERRADA") {
-        throw new Error("No se pueden enviar mensajes en una PQR cerrada");
-    }
-
-    if (senderRole === "USER" && pqr.userId !== senderId) {
-        throw new Error("Solo puedes enviar mensajes en las PQR creadas por ti");
-    }
-
-    if (senderRole === "AGENT" && pqr.assignedToId !== senderId) {
-        throw new Error("Solo puedes enviar mensajes en las PQR asignadas a ti");
-    }
+    await validatePqrAccess(pqrId, senderId, senderRole);
 
     const message = await prisma.pqrMessage.create({
         data: {
@@ -54,19 +71,68 @@ export const createPqrMessageService = async ({
                     role: true,
                 },
             },
+            attachments: true,
         },
     });
 
     return message;
 };
 
+// Crea un mensaje con archivo adjunto dentro de una PQR.
+export const createPqrMessageWithAttachmentService = async ({
+    pqrId,
+    senderId,
+    senderRole,
+    content,
+    file,
+}: CreatePqrMessageWithAttachmentData) => {
+    const cleanContent = content?.trim();
+
+    if (cleanContent && cleanContent.length > 1000) {
+        throw new Error("El mensaje no puede superar los 1000 caracteres");
+    }
+
+    await validatePqrAccess(pqrId, senderId, senderRole);
+
+    const attachmentData = buildPqrAttachmentData({
+        file,
+    });
+
+    const message = await prisma.pqrMessage.create({
+        data: {
+            content: cleanContent || null,
+            pqrId,
+            senderId,
+            attachments: {
+                create: attachmentData,
+            },
+        },
+        include: {
+            sender: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                },
+            },
+            attachments: true,
+        },
+    });
+
+    return message;
+};
+
+// Obtiene el historial de mensajes de una PQR.
 export const getPqrMessagesService = async (
     pqrId: number,
     userId: number,
     userRole: Role
 ) => {
     const pqr = await prisma.pQR.findUnique({
-        where: { id: pqrId },
+        where: {
+            id: pqrId,
+        },
     });
 
     if (!pqr) {
@@ -82,7 +148,9 @@ export const getPqrMessagesService = async (
     }
 
     const messages = await prisma.pqrMessage.findMany({
-        where: { pqrId },
+        where: {
+            pqrId,
+        },
         orderBy: {
             createdAt: "asc",
         },
@@ -95,6 +163,7 @@ export const getPqrMessagesService = async (
                     role: true,
                 },
             },
+            attachments: true,
         },
     });
 

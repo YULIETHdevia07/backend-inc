@@ -42,6 +42,11 @@ enum NotificationType {
   PQR_TAKEN
 }
 
+enum PqrAttachmentType {
+  IMAGE
+  DOCUMENT
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -83,7 +88,7 @@ model PQR {
 
 model PqrMessage {
   id        Int      @id @default(autoincrement())
-  content   String   @db.VarChar(1000)
+  content   String?  @db.VarChar(1000)
   createdAt DateTime @default(now())
 
   pqrId Int
@@ -91,6 +96,22 @@ model PqrMessage {
 
   senderId Int
   sender   User @relation(fields: [senderId], references: [id])
+
+  attachments PqrMessageAttachment[]
+}
+
+model PqrMessageAttachment {
+  id           Int               @id @default(autoincrement())
+  fileName     String
+  originalName String
+  fileUrl      String
+  fileType     PqrAttachmentType
+  mimeType     String
+  fileSize     Int
+  createdAt    DateTime          @default(now())
+
+  messageId Int
+  message   PqrMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
