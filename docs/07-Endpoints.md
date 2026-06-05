@@ -1580,6 +1580,8 @@ Endpoint protegido encargado de obtener el historial de mensajes de una PQR.
 
 Este endpoint se utiliza para cargar los mensajes anteriores cuando el usuario abre el detalle de una PQR.
 
+Los mensajes pueden contener solo texto, solo archivos adjuntos o texto acompañado de un archivo.
+
 ---
 
 ## Header requerido
@@ -1617,7 +1619,7 @@ Authorization: Bearer TOKEN
 
 ---
 
-## Respuesta exitosa con mensajes
+## Respuesta exitosa con mensajes de texto
 
 ```json
 {
@@ -1626,7 +1628,7 @@ Authorization: Bearer TOKEN
     {
       "id": 1,
       "content": "Hola, este es un mensaje de prueba desde Socket.IO.",
-      "createdAt": "2026-05-28T20:30:00.000Z",
+      "createdAt": "2026-06-04T20:30:00.000Z",
       "pqrId": 1,
       "senderId": 2,
       "sender": {
@@ -1634,11 +1636,64 @@ Authorization: Bearer TOKEN
         "name": "Juan",
         "email": "juan@gmail.com",
         "role": "USER"
-      }
+      },
+      "attachments": []
     }
   ]
 }
 ```
+
+---
+
+## Respuesta exitosa con mensaje y archivo adjunto
+
+```json
+{
+  "message": "Mensajes obtenidos correctamente",
+  "messages": [
+    {
+      "id": 93,
+      "content": null,
+      "createdAt": "2026-06-04T22:41:24.099Z",
+      "pqrId": 1,
+      "senderId": 2,
+      "sender": {
+        "id": 2,
+        "name": "goria",
+        "email": "yulid@gmail.com",
+        "role": "USER"
+      },
+      "attachments": [
+        {
+          "id": 1,
+          "fileName": "1780612884091-volante.pdf",
+          "originalName": "Volante.pdf",
+          "fileUrl": "/uploads/pqr/1780612884091-volante.pdf",
+          "fileType": "DOCUMENT",
+          "mimeType": "application/pdf",
+          "fileSize": 78205,
+          "createdAt": "2026-06-04T22:41:24.099Z",
+          "messageId": 93
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Notas importantes
+
+El campo `content` puede ser `null` cuando el usuario envía únicamente una imagen o documento.
+
+El campo `attachments` siempre se devuelve como un arreglo. Si el mensaje no tiene archivos, se devuelve vacío.
+
+```json
+"attachments": []
+```
+
+Si el mensaje tiene un archivo, se devuelve dentro del arreglo `attachments`.
 
 ---
 
@@ -1677,6 +1732,278 @@ Authorization: Bearer TOKEN
 ```json
 {
   "message": "Solo puedes ver los mensajes de las PQR asignadas a ti"
+}
+```
+
+---
+
+# Enviar mensaje con archivo adjunto en una PQR
+
+## Endpoint protegido
+
+```http
+POST /api/pqrs/:id/messages/attachment
+```
+
+## Descripción
+
+Endpoint protegido encargado de enviar un mensaje con archivo adjunto dentro del chat de una PQR.
+
+Este endpoint permite enviar imágenes o documentos asociados a un mensaje del chat.
+
+El mensaje puede contener:
+
+```txt
+Solo archivo
+Texto + archivo
+```
+
+Cuando se envía solo un archivo, el campo `content` se guarda como `null`.
+
+---
+
+## Tipo de envío requerido
+
+Este endpoint no recibe datos en formato JSON.
+
+Debe enviarse mediante:
+
+```txt
+multipart/form-data
+```
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+No se debe agregar manualmente el header `Content-Type`, ya que Postman o el frontend lo generan automáticamente al usar `multipart/form-data`.
+
+---
+
+## Acceso permitido
+
+* USER dueño de la PQR.
+* AGENT asignado a la PQR.
+* ADMIN según reglas del sistema.
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción             |
+| --------- | ------ | ----------------------- |
+| id        | number | Identificador de la PQR |
+
+---
+
+## Campos del form-data
+
+| Campo   | Tipo | Obligatorio | Descripción                               |
+| ------- | ---- | ----------- | ----------------------------------------- |
+| file    | File | Sí          | Imagen o documento que se desea adjuntar. |
+| content | Text | No          | Mensaje opcional que acompaña al archivo. |
+
+---
+
+## Tipos de archivo permitidos
+
+```txt
+image/jpeg
+image/png
+image/webp
+application/pdf
+```
+
+Formatos permitidos:
+
+```txt
+JPG
+PNG
+WEBP
+PDF
+```
+
+---
+
+## Tamaño máximo permitido
+
+```txt
+5 MB
+```
+
+---
+
+## Ejemplo en Postman
+
+```txt
+Método: POST
+URL: http://localhost:4000/api/pqrs/1/messages/attachment
+
+Headers:
+Authorization: Bearer TOKEN
+
+Body:
+form-data
+```
+
+| Key     | Type | Value                       |
+| ------- | ---- | --------------------------- |
+| file    | File | evidencia.png o soporte.pdf |
+| content | Text | Adjunto evidencia del caso. |
+
+---
+
+## Respuesta exitosa con documento
+
+```json
+{
+  "message": "Mensaje con archivo enviado correctamente",
+  "pqrMessage": {
+    "id": 93,
+    "content": null,
+    "createdAt": "2026-06-04T22:41:24.099Z",
+    "pqrId": 1,
+    "senderId": 2,
+    "sender": {
+      "id": 2,
+      "name": "goria",
+      "email": "yulid@gmail.com",
+      "role": "USER"
+    },
+    "attachments": [
+      {
+        "id": 1,
+        "fileName": "1780612884091-volante.pdf",
+        "originalName": "Volante.pdf",
+        "fileUrl": "/uploads/pqr/1780612884091-volante.pdf",
+        "fileType": "DOCUMENT",
+        "mimeType": "application/pdf",
+        "fileSize": 78205,
+        "createdAt": "2026-06-04T22:41:24.099Z",
+        "messageId": 93
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Respuesta exitosa con imagen
+
+```json
+{
+  "message": "Mensaje con archivo enviado correctamente",
+  "pqrMessage": {
+    "id": 94,
+    "content": "Adjunto evidencia del error.",
+    "createdAt": "2026-06-04T22:45:00.000Z",
+    "pqrId": 1,
+    "senderId": 2,
+    "sender": {
+      "id": 2,
+      "name": "goria",
+      "email": "yulid@gmail.com",
+      "role": "USER"
+    },
+    "attachments": [
+      {
+        "id": 2,
+        "fileName": "1780614180957-github.png",
+        "originalName": "github.png",
+        "fileUrl": "/uploads/pqr/1780614180957-github.png",
+        "fileType": "IMAGE",
+        "mimeType": "image/png",
+        "fileSize": 120000,
+        "createdAt": "2026-06-04T22:45:00.000Z",
+        "messageId": 94
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Respuesta si no se envía archivo
+
+```json
+{
+  "message": "El archivo es obligatorio"
+}
+```
+
+---
+
+## Respuesta si el archivo no es válido
+
+```json
+{
+  "message": "Solo se permiten imágenes JPG, PNG, WEBP o documentos PDF"
+}
+```
+
+---
+
+## Respuesta si el archivo supera el tamaño permitido
+
+```json
+{
+  "message": "File too large"
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la PQR está cerrada
+
+```json
+{
+  "message": "No se pueden enviar mensajes en una PQR cerrada"
+}
+```
+
+---
+
+## Respuesta si el USER no es dueño de la PQR
+
+```json
+{
+  "message": "Solo puedes enviar mensajes en las PQR creadas por ti"
+}
+```
+
+---
+
+## Respuesta si el AGENT no tiene asignada la PQR
+
+```json
+{
+  "message": "Solo puedes enviar mensajes en las PQR asignadas a ti"
 }
 ```
 
@@ -2158,43 +2485,44 @@ AGENT
 
 # Resumen actualizado de endpoints funcionales
 
-| Método | Endpoint                        | Descripción                                         | Acceso               |
-| ------ | ------------------------------- | --------------------------------------------------- | -------------------- |
-| GET    | /api/health                     | Verifica el funcionamiento de la API                | Público              |
-| GET    | /api/users                      | Obtiene todos los usuarios registrados              | ADMIN                |
-| POST   | /api/auth/register              | Registra un nuevo usuario                           | Público              |
-| POST   | /api/auth/register/bulk         | Registra usuarios mediante carga masiva desde Excel | ADMIN                |
-| POST   | /api/auth/login                 | Inicia sesión y genera token JWT                    | Público              |
-| GET    | /api/profile                    | Obtiene el perfil del usuario autenticado           | Usuario autenticado  |
-| POST   | /api/pqrs                       | Crea una nueva PQR                                  | USER / ADMIN         |
-| GET    | /api/pqrs/my                    | Obtiene las PQR del usuario autenticado             | USER / ADMIN         |
-| GET    | /api/pqrs                       | Obtiene todas las PQR del sistema                   | ADMIN                |
-| GET    | /api/pqrs/available             | Obtiene las PQR pendientes sin responsable          | ADMIN / AGENT        |
-| GET    | /api/pqrs/assigned/my           | Obtiene las PQR asignadas al AGENT autenticado      | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/take              | Permite que un AGENT tome una PQR disponible        | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/status            | Cambia el estado de una PQR                         | ADMIN / AGENT        |
-| PATCH  | /api/users/:id/role             | Cambia el rol de un usuario                         | ADMIN                |
-| PATCH  | /api/pqrs/:id/priority          | Cambia la prioridad de una PQR                      | ADMIN / AGENT        |
-| GET    | /api/pqrs/:id/messages          | Obtiene el historial de mensajes de una PQR         | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/rate              | Permite calificar una PQR cerrada                   | USER                 |
-| GET    | /api/notifications              | Obtiene las notificaciones del usuario autenticado  | USER / ADMIN / AGENT |
-| GET    | /api/notifications/unread-count | Obtiene la cantidad de notificaciones no leídas     | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/:id/read     | Marca una notificación como leída                   | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/read-all     | Marca todas las notificaciones como leídas          | USER / ADMIN / AGENT |
+| Método | Endpoint                          | Descripción                                                | Acceso               |
+| ------ | --------------------------------- | ---------------------------------------------------------- | -------------------- |
+| GET    | /api/health                       | Verifica el funcionamiento de la API                       | Público              |
+| GET    | /api/users                        | Obtiene todos los usuarios registrados                     | ADMIN                |
+| POST   | /api/auth/register                | Registra un nuevo usuario                                  | Público              |
+| POST   | /api/auth/register/bulk           | Registra usuarios mediante carga masiva desde Excel        | ADMIN                |
+| POST   | /api/auth/login                   | Inicia sesión y genera token JWT                           | Público              |
+| GET    | /api/profile                      | Obtiene el perfil del usuario autenticado                  | Usuario autenticado  |
+| POST   | /api/pqrs                         | Crea una nueva PQR                                         | USER / ADMIN         |
+| GET    | /api/pqrs/my                      | Obtiene las PQR del usuario autenticado                    | USER / ADMIN         |
+| GET    | /api/pqrs                         | Obtiene todas las PQR del sistema                          | ADMIN                |
+| GET    | /api/pqrs/available               | Obtiene las PQR pendientes sin responsable                 | ADMIN / AGENT        |
+| GET    | /api/pqrs/assigned/my             | Obtiene las PQR asignadas al AGENT autenticado             | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/take                | Permite que un AGENT tome una PQR disponible               | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/status              | Cambia el estado de una PQR                                | ADMIN / AGENT        |
+| PATCH  | /api/users/:id/role               | Cambia el rol de un usuario                                | ADMIN                |
+| PATCH  | /api/pqrs/:id/priority            | Cambia la prioridad de una PQR                             | ADMIN / AGENT        |
+| GET    | /api/pqrs/:id/messages            | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/rate                | Permite calificar una PQR cerrada                          | USER                 |
+| GET    | /api/notifications                | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT |
+| GET    | /api/notifications/unread-count   | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/:id/read       | Marca una notificación como leída                          | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/read-all       | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT |
+| POST   | /api/pqrs/:id/messages/attachment | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN |
 
 ---
 
 # Eventos Socket.IO funcionales
 
-| Evento           | Descripción                                             | Uso     |
-| ---------------- | ------------------------------------------------------- | ------- |
-| connection       | Conecta un usuario autenticado al socket                | Backend |
-| join_pqr         | Une al usuario a la sala de una PQR                     | Cliente |
-| joined_pqr       | Confirma que el usuario ingresó al chat                 | Backend |
-| send_pqr_message | Envía un mensaje dentro de una PQR                      | Cliente |
-| new_pqr_message  | Recibe un nuevo mensaje en tiempo real                  | Backend |
-| socket_error     | Informa errores de autenticación, permisos o validación | Backend |
-| disconnect       | Detecta la desconexión del usuario                      | Backend |
+| Evento           | Descripción                                                           | Uso     |
+| ---------------- | --------------------------------------------------------------------- | ------- |
+| connection       | Conecta un usuario autenticado al socket                              | Backend |
+| join_pqr         | Une al usuario a la sala de una PQR                                   | Cliente |
+| joined_pqr       | Confirma que el usuario ingresó al chat                               | Backend |
+| send_pqr_message | Envía un mensaje dentro de una PQR                                    | Cliente |
+| new_pqr_message  | Recibe un nuevo mensaje de texto o con archivo adjunto en tiempo real | Backend |
+| socket_error     | Informa errores de autenticación, permisos o validación               | Backend |
+| disconnect       | Detecta la desconexión del usuario                                    | Backend |
 
 ---
 
