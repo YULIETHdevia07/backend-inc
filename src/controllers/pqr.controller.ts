@@ -59,6 +59,7 @@ export const createPqr = async (
       caseType,
       description,
       userId: req.user.id,
+      file: req.file,
     });
 
     return res.status(201).json({

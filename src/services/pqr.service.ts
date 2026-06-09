@@ -1,6 +1,7 @@
 import prisma from "../config/client.js";
 import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
 import { PqrPriority, PqrStatus } from "@prisma/client";
+import { buildPqrAttachmentData } from "./storage.service.js";
 import {
   notifyAdminsAndAgentsAboutNewPqrService,
   notifyAdminsAboutTakenPqrService,
@@ -14,6 +15,7 @@ export const createPqrService = async ({
   caseType,
   description,
   userId,
+  file,
 }: CreatePqrData) => {
   const pqr = await prisma.pQR.create({
     data: {
@@ -31,6 +33,24 @@ export const createPqrService = async ({
           role: true,
         },
       },
+    },
+  });
+
+  // Crea siempre el primer mensaje del chat con la descripción de la PQR.
+  await prisma.pqrMessage.create({
+    data: {
+      content: description,
+      pqrId: pqr.id,
+      senderId: userId,
+
+      // Si el usuario adjunta archivo, se asocia al primer mensaje.
+      ...(file && {
+        attachments: {
+          create: buildPqrAttachmentData({
+            file,
+          }),
+        },
+      }),
     },
   });
 

@@ -828,20 +828,28 @@ POST /api/pqrs
 
 Endpoint privado encargado de registrar una nueva PQR asociada al usuario autenticado.
 
-La ruta utiliza middleware JWT para validar la autenticación mediante token.
+Al crear una PQR, el sistema crea automáticamente un primer mensaje dentro del chat de la solicitud usando la descripción registrada por el usuario.
+
+Si el usuario adjunta una imagen o documento al momento de crear la PQR, ese archivo queda asociado al primer mensaje del chat como evidencia inicial.
 
 ---
 
-## Header requerido
+## Tipos de envío permitidos
 
-```http
-Authorization: Bearer TOKEN
-Content-Type: application/json
+Este endpoint puede recibir la información de dos formas:
+
+```txt
+application/json
+multipart/form-data
 ```
 
+Se usa `application/json` cuando la PQR se crea sin archivo.
+
+Se usa `multipart/form-data` cuando la PQR se crea con una imagen o documento adjunto.
+
 ---
 
-## Body
+## Body sin archivo
 
 ```json
 {
@@ -852,6 +860,22 @@ Content-Type: application/json
 
 ---
 
+## Body con archivo
+
+Debe enviarse mediante:
+
+```txt
+multipart/form-data
+```
+
+| Campo       | Tipo | Obligatorio | Descripción                                       |
+| ----------- | ---- | ----------- | ------------------------------------------------- |
+| caseType    | Text | Sí          | Tipo de caso de la PQR                            |
+| description | Text | Sí          | Descripción de la solicitud                       |
+| file        | File | No          | Imagen o documento adjunto como evidencia inicial |
+
+---
+
 # Tipos de caso disponibles
 
 ```txt
@@ -859,6 +883,35 @@ SAP
 DANO_EQUIPO
 INSTALACION
 OTRO
+```
+
+---
+
+## Archivos permitidos como evidencia inicial
+
+Formatos permitidos:
+
+```txt
+JPG
+JPEG
+PNG
+WEBP
+PDF
+```
+
+Tipos MIME permitidos:
+
+```txt
+image/jpeg
+image/png
+image/webp
+application/pdf
+```
+
+Tamaño máximo permitido:
+
+```txt
+5 MB
 ```
 
 ---
@@ -876,7 +929,7 @@ El usuario que crea la PQR no recibe esta notificación.
 
 ---
 
-## Respuesta exitosa
+## Respuesta exitosa sin archivo
 
 ```json
 {
@@ -888,7 +941,48 @@ El usuario que crea la PQR no recibe esta notificación.
     "status": "PENDIENTE",
     "createdAt": "2026-05-12T00:00:00.000Z",
     "updatedAt": "2026-05-12T00:00:00.000Z",
-    "userId": 1
+    "userId": 1,
+    "assignedToId": null,
+    "priority": null,
+    "rating": null,
+    "ratingComment": null,
+    "ratedAt": null,
+    "user": {
+          "id": 1,
+          "name": "goria",
+          "email": "yulid@gmail.com",
+          "role": "USER"
+        }
+  }
+}
+```
+
+---
+
+## Respuesta exitosa con archivo
+
+```json
+{
+  "message": "PQR creada correctamente",
+  "pqr": {
+    "id": 1,
+    "caseType": "SAP",
+    "description": "Esta es una PQR creada desde Postman para probar el módulo.",
+    "status": "PENDIENTE",
+    "createdAt": "2026-05-12T00:00:00.000Z",
+    "updatedAt": "2026-05-12T00:00:00.000Z",
+    "userId": 1,
+    "assignedToId": null,
+    "priority": null,
+    "rating": null,
+    "ratingComment": null,
+    "ratedAt": null,
+    "user": {
+          "id": 1,
+          "name": "goria",
+          "email": "yulid@gmail.com",
+          "role": "USER"
+        }
   }
 }
 ```
@@ -926,6 +1020,16 @@ El usuario que crea la PQR no recibe esta notificación.
 ```json
 {
   "message": "La descripción no puede superar los 500 caracteres"
+}
+```
+
+---
+
+## Respuesta si el archivo no es válido
+
+```json
+{
+  "message": "Solo se permiten imágenes JPG, PNG, WEBP o documentos PDF"
 }
 ```
 
@@ -1755,6 +1859,7 @@ El mensaje puede contener:
 
 ```txt
 Solo archivo
+Solo texto
 Texto + archivo
 ```
 
@@ -1949,11 +2054,11 @@ form-data
 
 ---
 
-## Respuesta si el archivo supera el tamaño permitido
+## Respuesta si el mensaje supera los 500 caracteres
 
 ```json
 {
-  "message": "File too large"
+  "message": "El mensaje no puede superar los 500 caracteres"
 }
 ```
 

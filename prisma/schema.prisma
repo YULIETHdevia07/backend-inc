@@ -88,7 +88,7 @@ model PQR {
 
 model PqrMessage {
   id        Int      @id @default(autoincrement())
-  content   String?  @db.VarChar(1000)
+  content   String?  @db.VarChar(500)
   createdAt DateTime @default(now())
 
   pqrId Int

@@ -50,8 +50,8 @@ export const createPqrMessageService = async ({
         throw new Error("El mensaje es obligatorio");
     }
 
-    if (cleanContent.length > 1000) {
-        throw new Error("El mensaje no puede superar los 1000 caracteres");
+    if (cleanContent.length > 500) {
+        throw new Error("El mensaje no puede superar los 500 caracteres");
     }
 
     await validatePqrAccess(pqrId, senderId, senderRole);
@@ -88,8 +88,8 @@ export const createPqrMessageWithAttachmentService = async ({
 }: CreatePqrMessageWithAttachmentData) => {
     const cleanContent = content?.trim();
 
-    if (cleanContent && cleanContent.length > 1000) {
-        throw new Error("El mensaje no puede superar los 1000 caracteres");
+    if (cleanContent && cleanContent.length > 500) {
+        throw new Error("El mensaje no puede superar los 500 caracteres");
     }
 
     await validatePqrAccess(pqrId, senderId, senderRole);

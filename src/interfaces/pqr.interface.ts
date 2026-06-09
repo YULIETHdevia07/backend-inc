@@ -5,6 +5,7 @@ export interface CreatePqrData {
   caseType: PqrCaseType;
   description: string;
   userId: number;
+  file?: Express.Multer.File | undefined;
 }
 
 // Datos necesarios para calificar una PQR.
