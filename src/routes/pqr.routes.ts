@@ -19,11 +19,16 @@ const router = Router();
 router.post(
   "/",
   authMiddleware,
+  roleMiddleware(["USER"]),
   uploadPqrAttachment.single("file"),
   createPqr
 );
 
-router.get("/my", authMiddleware, getMyPqrs);
+router.get(
+  "/my",
+  authMiddleware,
+  roleMiddleware(["USER"]),
+  getMyPqrs);
 
 router.get(
   "/",
