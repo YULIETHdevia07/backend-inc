@@ -880,9 +880,15 @@ multipart/form-data
 
 ```txt
 SAP
-DANO_EQUIPO
-INSTALACION
-OTRO
+BEAS
+TERMINAL
+CORREO
+INTRANET
+SOPORTE_EQUIPOS
+SOPORTE_RED
+MI_PORTAL_SAP
+LEGALISAPP
+NUEVAS_SOLICITUDES
 ```
 
 ---
@@ -1006,9 +1012,15 @@ El usuario que crea la PQR no recibe esta notificación.
   "message": "Tipo de caso no válido",
   "allowedCaseTypes": [
     "SAP",
-    "DANO_EQUIPO",
-    "INSTALACION",
-    "OTRO"
+    "BEAS",
+    "TERMINAL",
+    "CORREO",
+    "INTRANET",
+    "SOPORTE_EQUIPOS",
+    "SOPORTE_RED",
+    "MI_PORTAL_SAP",
+    "LEGALISAPP",
+    "NUEVAS_SOLICITUDES",
   ]
 }
 ```

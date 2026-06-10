@@ -24,9 +24,15 @@ export const createPqr = async (
 
     const allowedCaseTypes: PqrCaseType[] = [
       "SAP",
-      "DANO_EQUIPO",
-      "INSTALACION",
-      "OTRO",
+      "BEAS",
+      "TERMINAL",
+      "CORREO",
+      "INTRANET",
+      "SOPORTE_EQUIPOS",
+      "SOPORTE_RED",
+      "MI_PORTAL_SAP",
+      "LEGALISAPP",
+      "NUEVAS_SOLICITUDES",
     ];
 
     if (!caseType || !description) {
