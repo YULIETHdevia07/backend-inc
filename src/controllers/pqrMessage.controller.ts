@@ -3,6 +3,7 @@ import type { AuthRequest } from "../interfaces/auth.interface.js";
 import {
     createPqrMessageWithAttachmentService,
     getPqrMessagesService,
+    markPqrChatAsReadService,
 } from "../services/pqrMessage.service.js";
 import { getIo } from "../config/socket.js";
 
@@ -98,6 +99,45 @@ export const createPqrMessageWithAttachmentController = async (
                 error instanceof Error
                     ? error.message
                     : "Error al enviar el archivo",
+        });
+    }
+};
+
+// Marca como leído el chat de una PQR para el usuario autenticado.
+export const markPqrChatAsReadController = async (
+    req: AuthRequest,
+    res: Response
+) => {
+    try {
+        const pqrId = Number(req.params.id);
+
+        if (!pqrId || Number.isNaN(pqrId)) {
+            return res.status(400).json({
+                message: "El id de la PQR no es válido",
+            });
+        }
+
+        if (!req.user) {
+            return res.status(401).json({
+                message: "Usuario no autenticado",
+            });
+        }
+
+        await markPqrChatAsReadService(
+            pqrId,
+            req.user.id,
+            req.user.role
+        );
+
+        return res.json({
+            message: "Chat marcado como leído correctamente",
+        });
+    } catch (error) {
+        return res.status(400).json({
+            message:
+                error instanceof Error
+                    ? error.message
+                    : "Error al marcar el chat como leído",
         });
     }
 };

@@ -10,6 +10,52 @@ import {
   notifyAboutRatedPqrService,
 } from "./notification.service.js";
 
+// Cuenta los mensajes no revisados de una PQR para un usuario específico.
+const getUnreadMessagesCount = async (
+  pqrId: number,
+  userId: number
+) => {
+  const chatRead = await prisma.pqrChatRead.findUnique({
+    where: {
+      pqrId_userId: {
+        pqrId,
+        userId,
+      },
+    },
+  });
+
+  const unreadMessagesCount = await prisma.pqrMessage.count({
+    where: {
+      pqrId,
+      senderId: {
+        not: userId,
+      },
+      ...(chatRead && {
+        createdAt: {
+          gt: chatRead.lastReadAt,
+        },
+      }),
+    },
+  });
+
+  return unreadMessagesCount;
+};
+
+// Agrega el contador de mensajes no revisados a cada PQR.
+const addUnreadMessagesCountToPqrs = async <T extends { id: number }>(
+  pqrs: T[],
+  userId: number
+) => {
+  const pqrsWithUnreadCount = await Promise.all(
+    pqrs.map(async (pqr) => ({
+      ...pqr,
+      unreadMessagesCount: await getUnreadMessagesCount(pqr.id, userId),
+    }))
+  );
+
+  return pqrsWithUnreadCount;
+};
+
 // Crea una nueva PQR asociada al usuario autenticado
 export const createPqrService = async ({
   caseType,
@@ -74,7 +120,7 @@ export const getMyPqrsService = async (userId: number) => {
     },
   });
 
-  return pqrs;
+  return addUnreadMessagesCountToPqrs(pqrs, userId);
 };
 
 export const getPqrByIdService = async (id: number) => {
@@ -86,8 +132,6 @@ export const getPqrByIdService = async (id: number) => {
 
   return pqr;
 };
-
-// Admin
 
 export const getAllPqrsService = async () => {
   const pqrs = await prisma.pQR.findMany({
@@ -151,7 +195,6 @@ export const updatePqrStatusService = async (
 
   return pqr;
 };
-
 
 // Obtiene las PQR que todavía no tienen responsable asignado
 export const getAvailablePqrsService = async () => {
@@ -274,7 +317,7 @@ export const getMyAssignedPqrsService = async (agentId: number) => {
     },
   });
 
-  return pqrs;
+  return addUnreadMessagesCountToPqrs(pqrs, agentId);
 };
 
 // Consulta una PQR por id incluyendo su responsable

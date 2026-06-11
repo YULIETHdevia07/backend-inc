@@ -169,3 +169,47 @@ export const getPqrMessagesService = async (
 
     return messages;
 };
+
+// Marca como leído el chat de una PQR para el usuario autenticado.
+export const markPqrChatAsReadService = async (
+    pqrId: number,
+    userId: number,
+    userRole: Role
+) => {
+    const pqr = await prisma.pQR.findUnique({
+        where: {
+            id: pqrId,
+        },
+    });
+
+    if (!pqr) {
+        throw new Error("La PQR no existe");
+    }
+
+    if (userRole === "USER" && pqr.userId !== userId) {
+        throw new Error("Solo puedes marcar como leído el chat de tus PQR");
+    }
+
+    if (userRole === "AGENT" && pqr.assignedToId !== userId) {
+        throw new Error("Solo puedes marcar como leído el chat de las PQR asignadas a ti");
+    }
+
+    const chatRead = await prisma.pqrChatRead.upsert({
+        where: {
+            pqrId_userId: {
+                pqrId,
+                userId,
+            },
+        },
+        update: {
+            lastReadAt: new Date(),
+        },
+        create: {
+            pqrId,
+            userId,
+            lastReadAt: new Date(),
+        },
+    });
+
+    return chatRead;
+};
