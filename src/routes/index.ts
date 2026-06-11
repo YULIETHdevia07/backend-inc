@@ -4,6 +4,8 @@ import userRoutes from "./user.routes.js";
 import profileRoutes from "./profile.routes.js";
 import pqrRoutes from "./pqr.routes.js";
 import authRoutes from "./auth.routes.js"
+import pqrMessageRoutes from "./pqrMessage.routes.js";
+import notificationRoutes from "./notification.routes.js";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use("/users", userRoutes);
 router.use("/profile", profileRoutes);
 router.use("/pqrs", pqrRoutes);
 router.use("/auth", authRoutes);
+router.use("/", pqrMessageRoutes);
+router.use("/notifications", notificationRoutes);
 
 export default router;

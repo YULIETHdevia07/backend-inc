@@ -7,7 +7,6 @@ import {
 } from "../controllers/user.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
-import { registerUser } from "../controllers/auth.controller.js";
 
 const router = Router();
 

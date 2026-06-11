@@ -4,7 +4,6 @@ import {
   getAllPqrs,
   getMyPqrs,
   updatePqrStatus,
-  respondPqr,
   getAvailablePqrsController,
   getMyAssignedPqrsController,
   takePqrController,
@@ -13,18 +12,31 @@ import {
 } from "../controllers/pqr.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { roleMiddleware } from "../middlewares/role.middleware.js";
+import { uploadPqrAttachment } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
-router.post("/", authMiddleware, createPqr);
-router.get("/my", authMiddleware, getMyPqrs);
-// Admin 
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware(["USER"]),
+  uploadPqrAttachment.single("file"),
+  createPqr
+);
+
+router.get(
+  "/my",
+  authMiddleware,
+  roleMiddleware(["USER"]),
+  getMyPqrs);
+
 router.get(
   "/",
   authMiddleware,
   roleMiddleware(["ADMIN"]),
   getAllPqrs
 );
+
 router.patch(
   "/:id/status",
   authMiddleware,
@@ -44,13 +56,6 @@ router.patch(
   authMiddleware,
   roleMiddleware(["USER"]),
   ratePqrController
-);
-
-router.patch(
-  "/:id/respond",
-  authMiddleware,
-  roleMiddleware(["ADMIN", "AGENT"]),
-  respondPqr
 );
 
 router.get(

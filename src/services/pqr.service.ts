@@ -1,11 +1,21 @@
-import prisma from "../../prisma/client.js";
+import prisma from "../config/client.js";
 import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
 import { PqrPriority, PqrStatus } from "@prisma/client";
+import { buildPqrAttachmentData } from "./storage.service.js";
+import {
+  notifyAdminsAndAgentsAboutNewPqrService,
+  notifyAdminsAboutTakenPqrService,
+  notifyUserAboutClosedPqrService,
+  notifyUserAboutTakenPqrService,
+  notifyAboutRatedPqrService,
+} from "./notification.service.js";
 
+// Crea una nueva PQR asociada al usuario autenticado
 export const createPqrService = async ({
   caseType,
   description,
   userId,
+  file,
 }: CreatePqrData) => {
   const pqr = await prisma.pQR.create({
     data: {
@@ -13,7 +23,43 @@ export const createPqrService = async ({
       description,
       userId,
     },
+    include: {
+      // usuario que creó la PQR
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
   });
+
+  // Crea siempre el primer mensaje del chat con la descripción de la PQR.
+  await prisma.pqrMessage.create({
+    data: {
+      content: description,
+      pqrId: pqr.id,
+      senderId: userId,
+
+      // Si el usuario adjunta archivo, se asocia al primer mensaje.
+      ...(file && {
+        attachments: {
+          create: buildPqrAttachmentData({
+            file,
+          }),
+        },
+      }),
+    },
+  });
+
+  // Notifica a ADMIN y AGENT que existe una nueva PQR
+  await notifyAdminsAndAgentsAboutNewPqrService(
+    pqr.id,
+    pqr.user.name,
+    pqr.user.email
+  );
 
   return pqr;
 };
@@ -71,10 +117,21 @@ export const getAllPqrsService = async () => {
   return pqrs;
 };
 
+// Cambia el estado de una PQR
 export const updatePqrStatusService = async (
   id: number,
   status: PqrStatus
 ) => {
+  const currentPqr = await prisma.pQR.findUnique({
+    where: {
+      id,
+    },
+  });
+
+  if (!currentPqr) {
+    return null;
+  }
+
   const pqr = await prisma.pQR.update({
     where: {
       id,
@@ -84,24 +141,17 @@ export const updatePqrStatusService = async (
     },
   });
 
-  return pqr;
-};
-
-export const respondPqrService = async (
-  id: number,
-  response: string
-) => {
-  const pqr = await prisma.pQR.update({
-    where: {
-      id,
-    },
-    data: {
-      response,
-    },
-  });
+  // Notifica al USER solo cuando la PQR cambia a CERRADA
+  if (currentPqr.status !== "CERRADA" && pqr.status === "CERRADA") {
+    await notifyUserAboutClosedPqrService(
+      pqr.userId,
+      pqr.id
+    );
+  }
 
   return pqr;
 };
+
 
 // Obtiene las PQR que todavía no tienen responsable asignado
 export const getAvailablePqrsService = async () => {
@@ -127,7 +177,7 @@ export const getAvailablePqrsService = async () => {
   return pqrs;
 };
 
-// Permite que un AGENT tome una PQR
+// Permite que un AGENT tome una PQR sin cambiar su estado
 export const takePqrService = async (
   pqrId: number,
   agentId: number
@@ -151,7 +201,7 @@ export const takePqrService = async (
       id: pqrId,
     },
     include: {
-      //  usuario que creó la PQR
+      // usuario que creó la PQR
       user: {
         select: {
           id: true,
@@ -171,6 +221,26 @@ export const takePqrService = async (
       },
     },
   });
+
+  if (!pqr || !pqr.assignedTo) {
+    return null;
+  }
+
+  // Notifica a los ADMIN qué agente tomó la PQR
+  await notifyAdminsAboutTakenPqrService(
+    pqr.id,
+    pqr.assignedTo.name,
+    pqr.assignedTo.email,
+    pqr.user.name,
+    pqr.user.email,
+    agentId
+  );
+
+  // Notifica al USER que su PQR ya está siendo atendida
+  await notifyUserAboutTakenPqrService(
+    pqr.user.id,
+    pqr.id
+  )
 
   return pqr;
 };
@@ -253,7 +323,7 @@ export const updatePqrPriorityService = async (
   return pqr;
 };
 
-// Permite calificar una PQR cerrada.
+// Permite calificar una PQR cerrada
 export const ratePqrService = async (
   pqrId: number,
   data: RatePqrData
@@ -266,8 +336,37 @@ export const ratePqrService = async (
       rating: data.rating,
       ratingComment: data.ratingComment ?? null,
       ratedAt: new Date(),
-    }
+    },
+    include: {
+      // usuario que creó y calificó la PQR
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      // agente asignado a la PQR
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
   });
+
+  // Notifica a los ADMIN y al AGENT asignado que la PQR fue calificada
+  await notifyAboutRatedPqrService(
+    pqr.id,
+    pqr.user.name,
+    pqr.user.email,
+    pqr.rating ?? data.rating,
+    pqr.assignedToId
+  );
 
   return pqr;
 };

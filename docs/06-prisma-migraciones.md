@@ -148,105 +148,15 @@ Este enum permite que el sistema solo acepte dos tipos de roles:
 
 ---
 
-# 7. Alteración del modelo User
-
-## Descripción
-
-Para implementar roles en el sistema, se modificó el modelo `User` agregando el campo `role`.
-
-Antes el modelo estaba así:
-
-```prisma
-model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
-}
-```
-
-Luego se modificó de la siguiente manera:
-
-```prisma
-enum Role {
-  USER
-  ADMIN
-}
-
-model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
-  role     Role   @default(USER)
-}
-```
-
----
-
-# 8. Explicación del campo role
-
-```prisma
-role Role @default(USER)
-```
-
-Este campo indica que cada usuario registrado en el sistema tendrá un rol.
-
-El valor por defecto será:
-
-```txt
-USER
-```
-
-Esto significa que cuando se registre un usuario nuevo, automáticamente será creado como usuario normal.
-
-Para que un usuario sea administrador, su rol debe cambiarse a:
-
-```txt
-ADMIN
-```
-
----
-
-# 9. Roles definidos en el sistema
-
-El sistema manejará inicialmente dos roles principales:
-
-## Rol USER
-
-El usuario normal podrá:
-
-- Crear PQR
-- Ver sus propias PQR
-
-## Rol ADMIN
-
-El administrador podrá:
-
-- Ver todas las PQR
-- Cambiar el estado de una PQR
-- Responder una PQR
-- Cerrar una PQR
-
----
-
-# 10. ¿Qué es una migración en Prisma?
+# 7. ¿Qué es una migración en Prisma?
 
 Una migración es el proceso mediante el cual Prisma convierte los cambios realizados en el archivo `schema.prisma` en cambios reales dentro de la base de datos MySQL.
 
 Cuando se agrega, elimina o modifica un modelo o campo, Prisma necesita aplicar esos cambios a la base de datos.
 
-Ejemplo de cambio:
-
-```prisma
-role Role @default(USER)
-```
-
-Este cambio no se aplica automáticamente en MySQL. Para aplicarlo se debe ejecutar una migración.
-
 ---
 
-# 11. Comando para crear una migración
+# 8. Comando para crear una migración
 
 Para aplicar el cambio del campo `role` en la tabla `User`, se ejecutó el siguiente comando:
 
@@ -265,33 +175,7 @@ El comando realiza las siguientes acciones:
 
 ---
 
-# 12. Significado del nombre de la migración
-
-En el comando:
-
-```bash
-npx prisma migrate dev --name add_role_to_user
-```
-
-La parte:
-
-```txt
-add_role_to_user
-```
-
-es el nombre de la migración.
-
-Este nombre debe ser descriptivo para identificar qué cambio se realizó.
-
-En este caso significa:
-
-```txt
-Agregar rol al usuario
-```
-
----
-
-# 13. Carpeta de migraciones
+# 9. Carpeta de migraciones
 
 Después de ejecutar el comando de migración, Prisma crea una carpeta dentro de:
 
@@ -311,7 +195,7 @@ Dentro del archivo `migration.sql` queda registrada la instrucción SQL que Pris
 
 ---
 
-# 14. ¿Qué es el archivo migration.sql?
+# 10. ¿Qué es el archivo migration.sql?
 
 El archivo `migration.sql` contiene las instrucciones SQL generadas por Prisma para modificar la base de datos.
 
@@ -321,7 +205,7 @@ Este archivo permite tener un historial claro de los cambios aplicados a la base
 
 ---
 
-# 15. ¿Qué es Prisma Client?
+# 11. ¿Qué es Prisma Client?
 
 Prisma Client es la herramienta que permite consultar la base de datos desde el código TypeScript.
 
@@ -347,7 +231,7 @@ prisma.user.delete()
 
 ---
 
-# 16. Comando para actualizar Prisma Client
+# 12. Comando para actualizar Prisma Client
 
 Después de modificar el archivo `schema.prisma`, también se debe actualizar Prisma Client.
 
@@ -386,7 +270,7 @@ Después de agregar el campo `role` y ejecutar `npx prisma generate`, TypeScript
 
 ---
 
-# 17. Diferencia entre migrate dev y generate
+# 13. Diferencia entre migrate dev y generate
 
 | Comando | Función principal | Qué actualiza |
 |---|---|---|

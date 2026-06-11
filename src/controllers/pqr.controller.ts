@@ -5,7 +5,6 @@ import {
   getAllPqrsService,
   getPqrByIdService,
   updatePqrStatusService,
-  respondPqrService,
   getAvailablePqrsService,
   getMyAssignedPqrsService,
   takePqrService,
@@ -25,9 +24,15 @@ export const createPqr = async (
 
     const allowedCaseTypes: PqrCaseType[] = [
       "SAP",
-      "DANO_EQUIPO",
-      "INSTALACION",
-      "OTRO",
+      "BEAS",
+      "TERMINAL",
+      "CORREO",
+      "INTRANET",
+      "SOPORTE_EQUIPOS",
+      "SOPORTE_RED",
+      "MI_PORTAL_SAP",
+      "LEGALISAPP",
+      "NUEVAS_SOLICITUDES",
     ];
 
     if (!caseType || !description) {
@@ -60,6 +65,7 @@ export const createPqr = async (
       caseType,
       description,
       userId: req.user.id,
+      file: req.file,
     });
 
     return res.status(201).json({
@@ -175,59 +181,6 @@ export const updatePqrStatus = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al actualizar el estado de la PQR",
-      error,
-    });
-  }
-};
-
-export const respondPqr = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const { id } = req.params;
-    const { response } = req.body;
-
-    const pqrId = Number(id);
-
-    if (Number.isNaN(pqrId)) {
-      return res.status(400).json({
-        message: "El id de la PQR no es válido",
-      });
-    }
-
-    if (!response || response.trim() === "") {
-      return res.status(400).json({
-        message: "La respuesta es obligatoria",
-      });
-    }
-
-    if (response.length > 500) {
-      return res.status(400).json({
-        message: "La respuesta no puede superar los 500 caracteres",
-      });
-    }
-
-    const existingPqr = await getPqrByIdService(pqrId);
-
-    if (!existingPqr) {
-      return res.status(404).json({
-        message: "La PQR no existe",
-      });
-    }
-
-    const pqr = await respondPqrService(
-      pqrId,
-      response.trim()
-    );
-
-    return res.json({
-      message: "PQR respondida correctamente",
-      pqr,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Error al responder la PQR",
       error,
     });
   }
