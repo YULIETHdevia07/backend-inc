@@ -3,6 +3,51 @@ import type { AuthSocket } from "../interfaces/socket.interface.js";
 import { createPqrMessageService } from "../services/pqrMessage.service.js";
 import prisma from "../config/client.js";
 
+// Cuenta los mensajes no revisados de una PQR para un usuario específico.
+const getUnreadMessagesCount = async (
+    pqrId: number,
+    userId: number
+) => {
+    const chatRead = await prisma.pqrChatRead.findUnique({
+        where: {
+            pqrId_userId: {
+                pqrId,
+                userId,
+            },
+        },
+    });
+
+    const unreadMessagesCount = await prisma.pqrMessage.count({
+        where: {
+            pqrId,
+            senderId: {
+                not: userId,
+            },
+            ...(chatRead && {
+                createdAt: {
+                    gt: chatRead.lastReadAt,
+                },
+            }),
+        },
+    });
+
+    return unreadMessagesCount;
+};
+
+// Emite el contador actualizado de mensajes no revisados al usuario indicado.
+const emitUnreadCountToUser = async (
+    io: Server,
+    pqrId: number,
+    userId: number
+) => {
+    const unreadMessagesCount = await getUnreadMessagesCount(pqrId, userId);
+
+    io.to(`user_${userId}`).emit("pqr_unread_count_updated", {
+        pqrId,
+        unreadMessagesCount,
+    });
+};
+
 // Registra los eventos socket relacionados únicamente con el chat de PQR
 export const registerPqrSocketEvents = (
     io: Server,
@@ -95,6 +140,29 @@ export const registerPqrSocketEvents = (
             });
 
             io.to(`pqr_${cleanPqrId}`).emit("new_pqr_message", message);
+
+            const pqr = await prisma.pQR.findUnique({
+                where: {
+                    id: cleanPqrId,
+                },
+                select: {
+                    userId: true,
+                    assignedToId: true,
+                },
+            });
+
+            if (pqr) {
+                const receiverIds = [pqr.userId, pqr.assignedToId].filter(
+                    (receiverId): receiverId is number =>
+                        Boolean(receiverId) && receiverId !== socket.user!.id
+                );
+
+                await Promise.all(
+                    receiverIds.map((receiverId) =>
+                        emitUnreadCountToUser(io, cleanPqrId, receiverId)
+                    )
+                );
+            }
         } catch (error) {
             socket.emit("socket_error", {
                 message:
