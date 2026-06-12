@@ -84,7 +84,6 @@ model PQR {
 
   priority PqrPriority?
 
-  // campos para calificación
   rating        Int?
   ratingComment String?   @db.VarChar(300)
   ratedAt       DateTime?

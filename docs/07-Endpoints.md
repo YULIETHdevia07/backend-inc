@@ -1092,7 +1092,8 @@ Authorization: Bearer TOKEN
       "status": "PENDIENTE",
       "createdAt": "2026-05-28T00:00:00.000Z",
       "updatedAt": "2026-05-28T00:00:00.000Z",
-      "userId": 1
+      "userId": 1,
+      "unreadMessagesCount": 2
     }
   ]
 }
@@ -1356,6 +1357,7 @@ Authorization: Bearer TOKEN_AGENT
       "updatedAt": "2026-05-28T00:00:00.000Z",
       "userId": 3,
       "assignedToId": 5,
+      "unreadMessagesCount": 1,
       "user": {
         "id": 3,
         "name": "Juan",
@@ -1848,6 +1850,106 @@ Si el mensaje tiene un archivo, se devuelve dentro del arreglo `attachments`.
 ```json
 {
   "message": "Solo puedes ver los mensajes de las PQR asignadas a ti"
+}
+```
+
+---
+
+# Marcar chat de PQR como leído
+
+## Endpoint protegido
+
+```http
+PATCH /api/pqrs/:id/messages/read
+```
+
+## Descripción
+
+Endpoint protegido encargado de marcar como leído el chat de una PQR para el usuario autenticado.
+
+Este endpoint se utiliza cuando el usuario o agente abre el chat de una PQR. El sistema guarda la fecha y hora de la última lectura.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+* USER dueño de la PQR.
+* AGENT asignado a la PQR.
+* ADMIN según reglas del sistema.
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción             |
+| --------- | ------ | ----------------------- |
+| id        | number | Identificador de la PQR |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Chat marcado como leído correctamente"
+}
+```
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+   "message": "Usuario no autenticado"
+}
+```
+
+---
+
+##  Respuesta si la PQR no existe
+
+```json
+{
+   "message": "La PQR no existe"
+}
+```
+
+---
+
+##  Respuesta si el USER no es dueño de la PQR
+
+```json
+{
+   "message":  "Solo puedes marcar como leído el chat de tus PQR"
+}
+```
+
+----
+
+##  Respuesta si el AGENT no tiene asignada la PQR
+
+```json
+{
+   "message": "Solo puedes marcar como leído el chat de las PQR asignadas a ti"
 }
 ```
 
@@ -2620,6 +2722,7 @@ AGENT
 | PATCH  | /api/users/:id/role               | Cambia el rol de un usuario                                | ADMIN                |
 | PATCH  | /api/pqrs/:id/priority            | Cambia la prioridad de una PQR                             | ADMIN / AGENT        |
 | GET    | /api/pqrs/:id/messages            | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/messages/read       | Marca como leído el chat de una PQR                        | USER / AGENT         |
 | PATCH  | /api/pqrs/:id/rate                | Permite calificar una PQR cerrada                          | USER                 |
 | GET    | /api/notifications                | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT |
 | GET    | /api/notifications/unread-count   | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT |

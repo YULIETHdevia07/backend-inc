@@ -4,11 +4,12 @@
 
 El backend utiliza **Socket.IO** para manejar funcionalidades en tiempo real dentro del sistema.
 
-Actualmente Socket.IO se usa para dos procesos principales:
+Actualmente Socket.IO se usa para tres procesos principales:
 
 ```txt
 1. Chat en tiempo real de las PQR.
 2. Notificaciones internas en tiempo real.
+3. Actualización en tiempo real del contador de mensajes sin revisar.
 ```
 
 El socket se conecta mediante autenticación JWT, por lo tanto, solo los usuarios autenticados pueden acceder a los eventos en tiempo real.
@@ -134,9 +135,11 @@ Crear una PQR
 Tomar una PQR
 Cerrar una PQR
 Calificar una PQR
+Enviar mensaje con archivo adjunto
+Actualizar contador de mensajes sin revisar
 ```
 
-Estas acciones se ejecutan desde servicios normales del backend, pero también necesitan emitir notificaciones en tiempo real.
+Estas acciones se ejecutan desde servicios normales del backend, pero también pueden necesitar emitir eventos en tiempo real.
 
 ---
 
@@ -152,7 +155,7 @@ src/sockets/index.socket.ts
 
 Este archivo funciona como la entrada general de Socket.IO.
 
-Aquí se maneja la conexión del usuario autenticado y se registra su sala personal para recibir notificaciones.
+Aquí se maneja la conexión del usuario autenticado y se registra su sala personal para recibir notificaciones y actualizaciones en tiempo real.
 
 También se registran los eventos específicos del chat de PQR.
 
@@ -203,12 +206,21 @@ user_2
 user_3
 ```
 
-Esta sala se utiliza para enviar notificaciones en tiempo real únicamente al usuario correspondiente.
+Esta sala se utiliza para enviar información en tiempo real únicamente al usuario correspondiente.
 
-Ejemplo:
+Ejemplo para notificaciones:
 
 ```ts
 io.to(`user_${userId}`).emit("new_notification", notification);
+```
+
+Ejemplo para contador de mensajes sin revisar:
+
+```ts
+io.to(`user_${userId}`).emit("pqr_unread_count_updated", {
+    pqrId,
+    unreadMessagesCount,
+});
 ```
 
 ---
@@ -231,13 +243,14 @@ No debe encargarse de registrar la conexión general del socket ni de manejar no
 
 ## Eventos registrados
 
-| Evento             | Descripción                                                              |
-| ------------------ | ------------------------------------------------------------------------ |
-| `join_pqr`         | Une al usuario autenticado a la sala de una PQR.                         |
-| `joined_pqr`       | Confirma que el usuario ingresó correctamente al chat de la PQR.         |
-| `send_pqr_message` | Envía un mensaje dentro del chat de una PQR.                             |
-| `new_pqr_message`  | Emite el nuevo mensaje a todos los usuarios dentro de la sala de la PQR. |
-| `socket_error`     | Informa errores de validación, autenticación o permisos.                 |
+| Evento                     | Descripción                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| `join_pqr`                 | Une al usuario autenticado a la sala de una PQR.                                             |
+| `joined_pqr`               | Confirma que el usuario ingresó correctamente al chat de la PQR.                             |
+| `send_pqr_message`         | Envía un mensaje dentro del chat de una PQR.                                                 |
+| `new_pqr_message`          | Emite el nuevo mensaje a todos los usuarios dentro de la sala de la PQR.                     |
+| `pqr_unread_count_updated` | Emite el contador actualizado de mensajes sin revisar de una PQR al usuario correspondiente. |
+| `socket_error`             | Informa errores de validación, autenticación o permisos.                                     |
 
 ---
 
@@ -272,6 +285,8 @@ Cuando un usuario entra al chat de una PQR, se une a su sala correspondiente.
 6. El backend guarda el mensaje en la base de datos.
 7. El backend emite new_pqr_message a la sala pqr_ID.
 8. Los usuarios dentro de esa sala reciben el mensaje en tiempo real.
+9. El backend calcula el contador de mensajes sin revisar para el receptor.
+10. El backend emite pqr_unread_count_updated a la sala personal del receptor.
 ```
 
 ---
@@ -313,6 +328,106 @@ new_pqr_message
     "role": "USER"
   }
 }
+```
+
+---
+
+# Contador de mensajes sin revisar
+
+## Descripción
+
+El sistema cuenta con un evento en tiempo real para actualizar el contador de mensajes sin revisar de una PQR.
+
+Este contador se usa para que el usuario o agente pueda identificar si una solicitud tiene nuevos mensajes pendientes por leer, sin necesidad de recargar la página.
+
+El contador aplica principalmente en:
+
+```txt
+USER  -> Mis PQR
+AGENT -> PQR asignadas
+```
+
+---
+
+## Evento emitido
+
+```txt
+pqr_unread_count_updated
+```
+
+---
+
+## Cuándo se emite
+
+Este evento se emite cuando se envía un nuevo mensaje dentro del chat de una PQR.
+
+Puede emitirse en dos casos:
+
+```txt
+1. Cuando se envía un mensaje de texto mediante Socket.IO.
+2. Cuando se envía un mensaje con archivo adjunto mediante endpoint HTTP.
+```
+
+---
+
+## Sala donde se emite
+
+El evento se emite a la sala personal del usuario receptor:
+
+```txt
+user_ID
+```
+
+Ejemplo:
+
+```txt
+user_5
+```
+
+Esto permite actualizar el contador únicamente al usuario que debe ver el mensaje como pendiente.
+
+---
+
+## Payload emitido
+
+```json
+{
+  "pqrId": 10,
+  "unreadMessagesCount": 2
+}
+```
+
+---
+
+## Campos del payload
+
+| Campo                 | Tipo   | Descripción                                           |
+| --------------------- | ------ | ----------------------------------------------------- |
+| `pqrId`               | number | Identificador de la PQR cuyo contador fue actualizado |
+| `unreadMessagesCount` | number | Cantidad de mensajes pendientes por revisar           |
+
+---
+
+## Ejemplo de emisión desde backend
+
+```ts
+io.to(`user_${userId}`).emit("pqr_unread_count_updated", {
+    pqrId,
+    unreadMessagesCount,
+});
+```
+
+---
+
+## Funcionamiento general
+
+```txt
+1. Un usuario envía un mensaje en una PQR.
+2. El backend guarda el mensaje.
+3. El backend identifica quién debe recibir el contador.
+4. El backend calcula los mensajes sin revisar.
+5. El backend emite pqr_unread_count_updated a la sala personal del usuario receptor.
+6. El frontend recibe el evento y actualiza el contador en la lista de PQR.
 ```
 
 ---
@@ -376,7 +491,7 @@ export const emitNotificationToUser = (
 
 ---
 
-# Diferencia entre chat y notificaciones
+# Diferencia entre chat, contador y notificaciones
 
 ## Chat
 
@@ -392,6 +507,36 @@ Frontend
 ```
 
 Por eso `pqr.socket.ts` tiene acceso directo a `io` y puede emitir el mensaje inmediatamente.
+
+---
+
+## Contador de mensajes sin revisar
+
+El contador se actualiza cuando se crea un nuevo mensaje en una PQR.
+
+Puede nacer desde Socket.IO o desde HTTP, dependiendo del tipo de mensaje.
+
+```txt
+Mensaje de texto:
+Frontend
+→ send_pqr_message
+→ pqr.socket.ts
+→ guardar mensaje
+→ calcular contador
+→ pqr_unread_count_updated
+→ Frontend
+```
+
+```txt
+Mensaje con archivo:
+Frontend
+→ POST /api/pqrs/:id/messages/attachment
+→ pqrMessage.controller.ts
+→ guardar mensaje con archivo
+→ calcular contador
+→ pqr_unread_count_updated
+→ Frontend
+```
 
 ---
 
@@ -427,16 +572,17 @@ Por eso `notification.service.ts` necesita obtener la instancia de Socket.IO med
 
 # Eventos Socket.IO utilizados
 
-| Evento             | Descripción                                              | Uso     |
-| ------------------ | -------------------------------------------------------- | ------- |
-| `connection`       | Conecta un usuario autenticado al socket.                | Backend |
-| `disconnect`       | Detecta la desconexión del usuario.                      | Backend |
-| `join_pqr`         | Une al usuario a la sala de una PQR.                     | Cliente |
-| `joined_pqr`       | Confirma que el usuario ingresó al chat de la PQR.       | Backend |
-| `send_pqr_message` | Envía un mensaje dentro de una PQR.                      | Cliente |
-| `new_pqr_message`  | Recibe un nuevo mensaje del chat en tiempo real.         | Backend |
-| `new_notification` | Recibe una nueva notificación en tiempo real.            | Backend |
-| `socket_error`     | Informa errores de autenticación, permisos o validación. | Backend |
+| Evento                     | Descripción                                                        | Uso     |
+| -------------------------- | ------------------------------------------------------------------ | ------- |
+| `connection`               | Conecta un usuario autenticado al socket.                          | Backend |
+| `disconnect`               | Detecta la desconexión del usuario.                                | Backend |
+| `join_pqr`                 | Une al usuario a la sala de una PQR.                               | Cliente |
+| `joined_pqr`               | Confirma que el usuario ingresó al chat de la PQR.                 | Backend |
+| `send_pqr_message`         | Envía un mensaje dentro de una PQR.                                | Cliente |
+| `new_pqr_message`          | Recibe un nuevo mensaje del chat en tiempo real.                   | Backend |
+| `pqr_unread_count_updated` | Recibe el contador actualizado de mensajes sin revisar de una PQR. | Backend |
+| `new_notification`         | Recibe una nueva notificación en tiempo real.                      | Backend |
+| `socket_error`             | Informa errores de autenticación, permisos o validación.           | Backend |
 
 ---
 
@@ -448,6 +594,15 @@ Por eso `notification.service.ts` necesita obtener la instancia de Socket.IO med
 | Tomar una PQR     | `PATCH /api/pqrs/:id/take`   | `new_notification` |
 | Cerrar una PQR    | `PATCH /api/pqrs/:id/status` | `new_notification` |
 | Calificar una PQR | `PATCH /api/pqrs/:id/rate`   | `new_notification` |
+
+---
+
+# Eventos que actualizan el contador de mensajes sin revisar
+
+| Acción                     | Origen                                   | Evento emitido             |
+| -------------------------- | ---------------------------------------- | -------------------------- |
+| Enviar mensaje de texto    | `send_pqr_message`                       | `pqr_unread_count_updated` |
+| Enviar mensaje con archivo | `POST /api/pqrs/:id/messages/attachment` | `pqr_unread_count_updated` |
 
 ---
 
@@ -475,6 +630,7 @@ Verificar que el backend pueda:
 5. Recibir el mensaje en tiempo real.
 6. Guardar el mensaje correctamente en la base de datos.
 7. Consultar posteriormente el mensaje desde el historial de la PQR.
+8. Emitir el contador actualizado de mensajes sin revisar cuando corresponda.
 ```
 
 ---
@@ -521,6 +677,21 @@ Nuevo mensaje recibido:
 }
 ```
 
+También se puede validar que el usuario receptor reciba el evento:
+
+```txt
+pqr_unread_count_updated
+```
+
+Con un payload similar a:
+
+```json
+{
+  "pqrId": 1,
+  "unreadMessagesCount": 1
+}
+```
+
 ---
 
 # Nota importante
@@ -548,5 +719,7 @@ sockets/pqr.socket.ts
 sockets/notification.socket.ts
 → Emite notificaciones en tiempo real.
 ```
+
+Además, el evento `pqr_unread_count_updated` permite actualizar en tiempo real el contador de mensajes sin revisar sin recargar la página.
 
 Esta separación evita que el archivo `pqr.socket.ts` tenga responsabilidades generales o de notificaciones, manteniendo el backend más limpio, entendible y escalable.
