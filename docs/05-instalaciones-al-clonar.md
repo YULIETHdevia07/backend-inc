@@ -39,7 +39,7 @@ Incluyendo:
 
 ---
 
-# .3. Configurar variables de entorno
+# 3. Configurar variables de entorno
 
 Crear un archivo:
 
@@ -53,7 +53,44 @@ Crear un archivo:
 DATABASE_URL="mysql://usuario:password@localhost:3306/backend_inc"
 JWT_SECRET="secret_key"
 PORT=3000
+FRONTEND_URL="http://localhost:5173"
 ```
+
+## Descripción
+
+Las variables de entorno permiten configurar datos importantes del proyecto sin escribirlos directamente en el código.
+
+La variable:
+
+```env
+DATABASE_URL="mysql://usuario:password@localhost:3306/backend_inc"
+```
+
+se utiliza para conectar el backend con la base de datos MySQL. En esta variable se especifica el usuario, la contraseña, el servidor, el puerto y el nombre de la base de datos.
+
+La variable:
+
+```env
+JWT_SECRET="secret_key"
+```
+
+se utiliza para firmar y validar los tokens de autenticación JWT. Esta clave permite proteger las sesiones de los usuarios dentro del sistema.
+
+La variable:
+
+```env
+PORT=3000
+```
+
+indica el puerto en el que se ejecutará el servidor backend.
+
+La variable:
+
+```env
+FRONTEND_URL="http://localhost:5173"
+```
+
+indica la dirección donde se ejecuta el frontend. Esta variable se utiliza principalmente para permitir la comunicación entre el frontend y el backend, por ejemplo, en la configuración de CORS.
 
 ---
 
