@@ -567,6 +567,91 @@ Authorization: Bearer TOKEN_ADMIN
 
 ---
 
+# Obtener agentes
+
+## Endpoint protegido para ADMIN
+
+```http
+GET /api/users/agents
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener únicamente los usuarios con rol `AGENT`.
+
+Esta ruta permite al administrador consultar la lista de agentes disponibles para asignar o reasignar una PQR.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+* ADMIN
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Agentes obtenidos correctamente",
+  "agents": [
+    {
+      "id": 5,
+      "name": "Carlos Agente",
+      "email": "carlos@gmail.com",
+      "role": "AGENT"
+    },
+    {
+      "id": 8,
+      "name": "María Agente",
+      "email": "maria@gmail.com",
+      "role": "AGENT"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta si el usuario no es ADMIN
+
+```json
+{
+  "message": "No tienes permisos para acceder a esta ruta"
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener los agentes"
+}
+```
+
+
+---
+
 # Cambiar rol de usuario
 
 ## Endpoint protegido para ADMIN
@@ -1308,6 +1393,315 @@ Tomar una PQR no cambia automáticamente el estado de la solicitud. Solo se actu
   }
 }
 ```
+
+---
+
+# Asignar o reasignar una PQR
+
+## Endpoint protegido para ADMIN
+
+```http
+PATCH /api/pqrs/:id/assign
+```
+
+## Descripción
+
+Endpoint privado encargado de permitir que un usuario con rol `ADMIN` asigne o reasigne una PQR a un agente específico.
+
+Si la PQR no tiene agente asignado, el sistema la asigna por primera vez.
+
+Si la PQR ya tiene un agente asignado, el sistema reemplaza el responsable anterior por el nuevo agente seleccionado.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+* ADMIN
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                             |
+| --------- | ------ | --------------------------------------- |
+| id        | number | Identificador de la PQR que se asignará |
+
+---
+
+## Body
+
+```json
+{
+  "agentId": 5
+}
+```
+
+---
+
+## Campos del body
+
+| Campo   | Tipo   | Obligatorio | Descripción                                  |
+| ------- | ------ | ----------- | -------------------------------------------- |
+| agentId | number | Sí          | Identificador del agente que recibirá la PQR |
+
+---
+
+## Notificación automática
+
+Cuando un ADMIN asigna o reasigna una PQR, el sistema genera notificaciones según el caso.
+
+### Asignación por primera vez
+
+| Destinatario         | Tipo         | Mensaje                                       |
+| -------------------- | ------------ | --------------------------------------------- |
+| AGENT asignado       | PQR_ASSIGNED | Se te asignó la PQR #10.                      |
+| USER dueño de la PQR | PQR_TAKEN    | Tu solicitud #10 ya fue tomada por un agente. |
+
+### Reasignación a otro agente
+
+| Destinatario   | Tipo           | Mensaje                           |
+| -------------- | -------------- | --------------------------------- |
+| Nuevo AGENT    | PQR_ASSIGNED   | Se te asignó la PQR #10.          |
+| AGENT anterior | PQR_UNASSIGNED | Ya no tienes asignada la PQR #10. |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Responsable de la PQR actualizado correctamente",
+  "pqr": {
+    "id": 1,
+    "caseType": "SAP",
+    "description": "No puedo ingresar al sistema.",
+    "status": "PENDIENTE",
+    "createdAt": "2026-05-28T00:00:00.000Z",
+    "updatedAt": "2026-06-18T00:00:00.000Z",
+    "userId": 3,
+    "assignedToId": 5,
+    "user": {
+      "id": 3,
+      "name": "Juan",
+      "email": "juan@gmail.com",
+      "role": "USER"
+    },
+    "assignedTo": {
+      "id": 5,
+      "name": "Carlos Agente",
+      "email": "carlos@gmail.com",
+      "role": "AGENT"
+    }
+  }
+}
+```
+
+---
+
+## Respuesta si el id de la PQR no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si no se envía el agente
+
+```json
+{
+  "message": "El agente es obligatorio"
+}
+```
+
+---
+
+## Respuesta si el id del agente no es válido
+
+```json
+{
+  "message": "El id del agente no es válido"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si el agente no existe
+
+```json
+{
+  "message": "El agente no existe"
+}
+```
+
+---
+
+## Respuesta si el usuario seleccionado no es AGENT
+
+```json
+{
+  "message": "El usuario seleccionado no tiene rol AGENT"
+}
+```
+
+---
+
+## Respuesta si la PQR está cerrada
+
+```json
+{
+  "message": "No se puede asignar o reasignar una PQR cerrada"
+}
+```
+
+---
+
+# Desasignar una PQR
+
+## Endpoint protegido para ADMIN
+
+```http
+PATCH /api/pqrs/:id/unassign
+```
+
+## Ejemplo
+
+```http
+PATCH /api/pqrs/1/unassign
+```
+
+## Descripción
+
+Endpoint privado encargado de permitir que un usuario con rol `ADMIN` quite el agente asignado de una PQR.
+
+Al desasignar una PQR, el campo `assignedToId` queda en `null`, por lo tanto la solicitud vuelve a quedar disponible para ser tomada o asignada nuevamente.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN_ADMIN
+```
+
+---
+
+## Acceso permitido
+
+* ADMIN
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                |
+| --------- | ------ | ------------------------------------------ |
+| id        | number | Identificador de la PQR que se desasignará |
+
+---
+
+## Body
+
+Este endpoint no requiere body.
+
+---
+
+## Notificación automática
+
+Cuando un ADMIN desasigna una PQR, el sistema notifica al agente que fue retirado.
+
+| Destinatario   | Tipo           | Mensaje                           |
+| -------------- | -------------- | --------------------------------- |
+| AGENT anterior | PQR_UNASSIGNED | Ya no tienes asignada la PQR #10. |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "PQR desasignada correctamente",
+  "pqr": {
+    "id": 1,
+    "caseType": "SAP",
+    "description": "No puedo ingresar al sistema.",
+    "status": "PENDIENTE",
+    "createdAt": "2026-05-28T00:00:00.000Z",
+    "updatedAt": "2026-06-18T00:00:00.000Z",
+    "userId": 3,
+    "assignedToId": null,
+    "user": {
+      "id": 3,
+      "name": "Juan",
+      "email": "juan@gmail.com",
+      "role": "USER"
+    },
+    "assignedTo": null
+  }
+}
+```
+
+---
+
+## Respuesta si el id de la PQR no es válido
+
+```json
+{
+  "message": "El id de la PQR no es válido"
+}
+```
+
+---
+
+## Respuesta si la PQR no existe
+
+```json
+{
+  "message": "La PQR no existe"
+}
+```
+
+---
+
+## Respuesta si la PQR no tiene agente asignado
+
+```json
+{
+  "message": "La PQR no tiene agente asignado"
+}
+```
+
+---
+
+## Respuesta si la PQR está cerrada
+
+```json
+{
+  "message": "No se puede desasignar una PQR cerrada"
+}
+```
+
 
 ---
 
@@ -2433,18 +2827,24 @@ Las notificaciones se guardan en la base de datos y cada usuario autenticado pue
 ```txt
 NEW_PQR
 STATUS_CHANGE
+PRIORITY_CHANGE
 PQR_CLOSED
 PQR_RATED
 PQR_TAKEN
+PQR_ASSIGNED
+PQR_UNASSIGNED
 ```
 
-| Tipo          | Descripción                                             |
-| ------------- | ------------------------------------------------------- |
-| NEW_PQR       | Se genera cuando un usuario crea una nueva PQR.         |
-| STATUS_CHANGE | Se reserva para notificar cambios de estado de una PQR. |
-| PQR_CLOSED    | Se genera cuando una PQR cambia a estado CERRADA.       |
-| PQR_RATED     | Se genera cuando un usuario califica una PQR cerrada.   |
-| PQR_TAKEN     | Se genera cuando un agente toma una PQR disponible.     |
+| Tipo            | Descripción                                                                                  |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| NEW_PQR         | Se genera cuando un usuario crea una nueva PQR.                                              |
+| STATUS_CHANGE   | Se reserva para notificar cambios de estado de una PQR.                                      |
+| PRIORITY_CHANGE | Se reserva para notificar cambios de prioridad de una PQR.                                   |
+| PQR_CLOSED      | Se genera cuando una PQR cambia a estado CERRADA.                                            |
+| PQR_RATED       | Se genera cuando un usuario califica una PQR cerrada.                                        |
+| PQR_TAKEN       | Se genera cuando un agente toma una PQR o cuando se asigna por primera vez al usuario dueño. |
+| PQR_ASSIGNED    | Se genera cuando un ADMIN asigna o reasigna una PQR a un agente.                             |
+| PQR_UNASSIGNED  | Se genera cuando un ADMIN retira una PQR a un agente.                                        |
 
 ---
 
@@ -2729,6 +3129,9 @@ AGENT
 | PATCH  | /api/notifications/:id/read       | Marca una notificación como leída                          | USER / ADMIN / AGENT |
 | PATCH  | /api/notifications/read-all       | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT |
 | POST   | /api/pqrs/:id/messages/attachment | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/assign              | Asigna o reasigna una PQR a un agente específico           | ADMIN                |
+| PATCH  | /api/pqrs/:id/unassign            | Desasigna una PQR y la deja nuevamente disponible          | ADMIN                |
+| GET    | /api/users/agents                 | Obtiene únicamente los usuarios con rol AGENT              | ADMIN                |
 
 ---
 
@@ -2748,9 +3151,11 @@ AGENT
 
 # Eventos que generan notificaciones
 
-| Acción            | Quién ejecuta | Quién recibe                 | Tipo de notificación |
-| ----------------- | ------------- | ---------------------------- | -------------------- |
-| Crear una PQR     | USER          | ADMIN y AGENT                | NEW_PQR              |
-| Tomar una PQR     | AGENT         | ADMIN y USER dueño de la PQR | PQR_TAKEN            |
-| Cerrar una PQR    | ADMIN o AGENT | USER dueño de la PQR         | PQR_CLOSED           |
-| Calificar una PQR | USER          | ADMIN y AGENT asignado       | PQR_RATED            |
+| Acción                          | Quién ejecuta | Quién recibe                          | Tipo de notificación          |
+| Crear una PQR                   | USER          | ADMIN y AGENT                         | NEW_PQR                       |
+| Tomar una PQR                   | AGENT         | ADMIN y USER dueño de la PQR          | PQR_TAKEN                     |
+| Cerrar una PQR                  | ADMIN o AGENT | USER dueño de la PQR                  | PQR_CLOSED                    |
+| Calificar una PQR               | USER          | ADMIN y AGENT asignado                | PQR_RATED                     |
+| Asignar una PQR por primera vez | ADMIN         | AGENT asignado y USER dueño de la PQR | PQR_ASSIGNED / PQR_TAKEN      |
+| Reasignar una PQR               | ADMIN         | Nuevo AGENT y AGENT anterior          | PQR_ASSIGNED / PQR_UNASSIGNED |
+| Desasignar una PQR              | ADMIN         | AGENT retirado                        | PQR_UNASSIGNED                |

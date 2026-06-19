@@ -11,6 +11,8 @@ import {
   getPqrWithAssignedService,
   updatePqrPriorityService,
   ratePqrService,
+  assignPqrService,
+  unassignPqrService,
 } from "../services/pqr.service.js";
 import type { AuthRequest } from "../interfaces/auth.interface.js";
 import { PqrStatus, PqrCaseType, PqrPriority } from "@prisma/client";
@@ -263,6 +265,84 @@ export const takePqrController = async (
   } catch (error) {
     return res.status(500).json({
       message: "Error al tomar la PQR",
+    });
+  }
+};
+
+// Permite que un ADMIN asigne o reasigne una PQR a un AGENT específico.
+export const assignPqrController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { agentId } = req.body;
+
+    const pqrId = Number(id);
+    const cleanAgentId = Number(agentId);
+
+    if (!pqrId || Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    if (!agentId) {
+      return res.status(400).json({
+        message: "El agente es obligatorio",
+      });
+    }
+
+    if (!cleanAgentId || Number.isNaN(cleanAgentId)) {
+      return res.status(400).json({
+        message: "El id del agente no es válido",
+      });
+    }
+
+    const pqr = await assignPqrService(pqrId, cleanAgentId);
+
+    return res.status(200).json({
+      message: "Responsable de la PQR actualizado correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error al asignar o reasignar la PQR",
+    });
+  }
+};
+
+// Permite que un ADMIN quite el AGENT asignado de una PQR.
+export const unassignPqrController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+
+    const pqrId = Number(id);
+
+    if (!pqrId || Number.isNaN(pqrId)) {
+      return res.status(400).json({
+        message: "El id de la PQR no es válido",
+      });
+    }
+
+    const pqr = await unassignPqrService(pqrId);
+
+    return res.status(200).json({
+      message: "PQR desasignada correctamente",
+      pqr,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message:
+        error instanceof Error
+          ? error.message
+          : "Error al desasignar la PQR",
     });
   }
 };

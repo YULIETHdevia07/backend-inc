@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   getUsers,
+  getAgents,
   loginUser,
   updateUserRole,
 } from "../controllers/user.controller.js";
@@ -12,7 +13,19 @@ const router = Router();
 
 router.get("/", authMiddleware, roleMiddleware(["ADMIN"]), getUsers);
 
-router.patch("/:id/role", authMiddleware, roleMiddleware(["ADMIN"]), updateUserRole);
+router.get(
+  "/agents",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  getAgents
+);
+
+router.patch(
+  "/:id/role",
+  authMiddleware,
+  roleMiddleware(["ADMIN"]),
+  updateUserRole
+);
 
 router.post("/login", loginUser);
 

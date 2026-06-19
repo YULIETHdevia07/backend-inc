@@ -1,4 +1,9 @@
-import { getAllUsersService, getUserByIdService, updateUserRoleService } from "../services/user.service.js";
+import {
+  getAllUsersService,
+  getUserByIdService,
+  updateUserRoleService,
+  getAgentsService,
+} from "../services/user.service.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -22,6 +27,24 @@ export const getUsers = async (
     });
   }
 
+};
+
+export const getAgents = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const agents = await getAgentsService();
+
+    return res.status(200).json({
+      message: "Agentes obtenidos correctamente",
+      agents,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error al obtener los agentes",
+    });
+  }
 };
 
 export const loginUser = async (
@@ -126,7 +149,7 @@ export const updateUserRole = async (
       });
     }
 
-    const updatedUser = await updateUserRoleService(userId,role);
+    const updatedUser = await updateUserRoleService(userId, role);
 
     return res.status(200).json({
       message: "Rol del usuario actualizado correctamente",

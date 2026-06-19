@@ -268,3 +268,35 @@ export const notifyAboutRatedPqrService = async (
 
     return result;
 };
+
+// Notifica al AGENT cuando un ADMIN le asigna o reasigna una PQR
+export const notifyAgentAboutAssignedPqrService = async (
+    agentId: number,
+    pqrId: number
+) => {
+    const notification = await createNotificationService({
+        title: "PQR asignada",
+        message: `Se te asignó la PQR #${pqrId}.`,
+        type: NotificationType.PQR_ASSIGNED,
+        userId: agentId,
+        pqrId,
+    });
+
+    return notification;
+};
+
+// Notifica al AGENT anterior cuando un ADMIN le retira una PQR
+export const notifyAgentAboutUnassignedPqrService = async (
+    agentId: number,
+    pqrId: number
+) => {
+    const notification = await createNotificationService({
+        title: "PQR retirada",
+        message: `Ya no tienes asignada la PQR #${pqrId}.`,
+        type: NotificationType.PQR_UNASSIGNED,
+        userId: agentId,
+        pqrId,
+    });
+
+    return notification;
+};

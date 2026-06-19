@@ -1,6 +1,6 @@
 import prisma from "../config/client.js";
 import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
-import { PqrPriority, PqrStatus } from "@prisma/client";
+import { PqrPriority, PqrStatus, Role } from "@prisma/client";
 import { buildPqrAttachmentData } from "./storage.service.js";
 import {
   notifyAdminsAndAgentsAboutNewPqrService,
@@ -8,6 +8,8 @@ import {
   notifyUserAboutClosedPqrService,
   notifyUserAboutTakenPqrService,
   notifyAboutRatedPqrService,
+  notifyAgentAboutAssignedPqrService,
+  notifyAgentAboutUnassignedPqrService,
 } from "./notification.service.js";
 
 // Cuenta los mensajes no revisados de una PQR para un usuario específico.
@@ -284,6 +286,151 @@ export const takePqrService = async (
     pqr.user.id,
     pqr.id
   )
+
+  return pqr;
+};
+
+// Permite que un ADMIN asigne o reasigne una PQR a un AGENT específico.
+export const assignPqrService = async (
+  pqrId: number,
+  agentId: number
+) => {
+  const pqrExists = await prisma.pQR.findUnique({
+    where: {
+      id: pqrId,
+    },
+  });
+
+  if (!pqrExists) {
+    throw new Error("La PQR no existe");
+  }
+
+  if (pqrExists.status === PqrStatus.CERRADA) {
+    throw new Error("No se puede asignar o reasignar una PQR cerrada");
+  }
+
+  const agent = await prisma.user.findUnique({
+    where: {
+      id: agentId,
+    },
+  });
+
+  if (!agent) {
+    throw new Error("El agente no existe");
+  }
+
+  if (agent.role !== Role.AGENT) {
+    throw new Error("El usuario seleccionado no tiene rol AGENT");
+  }
+
+  const previousAgentId = pqrExists.assignedToId;
+
+  const pqr = await prisma.pQR.update({
+    where: {
+      id: pqrId,
+    },
+    data: {
+      assignedToId: agentId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  // Notifica al nuevo AGENT que recibió la PQR.
+  await notifyAgentAboutAssignedPqrService(
+    agentId,
+    pqr.id
+  );
+
+  // Si antes no tenía agente, se notifica al USER igual que cuando un agente toma la PQR.
+  if (!previousAgentId) {
+    await notifyUserAboutTakenPqrService(
+      pqr.userId,
+      pqr.id
+    );
+  }
+
+  // Si tenía otro agente, se notifica al agente anterior que ya no tiene esa PQR.
+  if (previousAgentId && previousAgentId !== agentId) {
+    await notifyAgentAboutUnassignedPqrService(
+      previousAgentId,
+      pqr.id
+    );
+  }
+
+  return pqr;
+};
+
+// Permite que un ADMIN quite el AGENT asignado de una PQR.
+export const unassignPqrService = async (pqrId: number) => {
+  const pqrExists = await prisma.pQR.findUnique({
+    where: {
+      id: pqrId,
+    },
+  });
+
+  if (!pqrExists) {
+    throw new Error("La PQR no existe");
+  }
+
+  if (pqrExists.status === PqrStatus.CERRADA) {
+    throw new Error("No se puede desasignar una PQR cerrada");
+  }
+
+  if (!pqrExists.assignedToId) {
+    throw new Error("La PQR no tiene agente asignado");
+  }
+
+  const previousAgentId = pqrExists.assignedToId;
+
+  const pqr = await prisma.pQR.update({
+    where: {
+      id: pqrId,
+    },
+    data: {
+      assignedToId: null,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+      assignedTo: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  // Notifica al AGENT que fue retirado de la PQR.
+  await notifyAgentAboutUnassignedPqrService(
+    previousAgentId,
+    pqr.id
+  );
 
   return pqr;
 };

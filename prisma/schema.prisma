@@ -46,6 +46,8 @@ enum NotificationType {
   PQR_CLOSED
   PQR_RATED
   PQR_TAKEN
+  PQR_ASSIGNED
+  PQR_UNASSIGNED
 }
 
 enum PqrAttachmentType {

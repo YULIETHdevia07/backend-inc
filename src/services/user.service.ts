@@ -48,3 +48,22 @@ export const updateUserRoleService = async (
 
     return user;
 };
+
+export const getAgentsService = async () => {
+    const agents = await prisma.user.findMany({
+        where: {
+            role: Role.AGENT,
+        },
+        orderBy: {
+            name: "asc",
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+        },
+    });
+
+    return agents;
+};
