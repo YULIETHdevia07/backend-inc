@@ -65,28 +65,66 @@ src/
 │   └── socket.ts
 │
 ├── controllers/
-│   └── pqrMessage.controller.ts
-│
-├── routes/
-│   ├── index.ts
-│   └── pqrMessage.routes.ts
-│
-├── services/
-│   └── pqrMessage.service.ts
+│   ├── auth
+│   |   └── auth.controller.ts
+│   ├── notifications
+│   |   └── notification.controller.ts
+│   ├── pqrs
+|   |   ├── pqr.controller.ts
+│   |   └── pqrMessage.controller.ts
+│   └── users
+│       ├── profile.controller.ts
+|       └─ user.controller.ts
+|
+├── interfaces/
+│   ├── auth
+│   |   └── auth.interface.ts
+│   ├── notifications
+│   |   └── notification.interface.ts
+│   ├── pqrs
+|   |   ├── pqr.interface.ts
+│   |   └── pqrMessage.interface.ts
+│   └── sockets
+|       └─ socket.interface.ts
 │
 ├── middlewares/
 │   ├── auth.middleware.ts
-│   └── socketAuth.middleware.ts
+│   ├── role.middleware.ts
+│   ├── socketAuth.middleware.ts
+│   └── upload.middleware.ts
 │
-├── interfaces/
-│   ├── auth.interface.ts
-│   ├── pqrMessage.interface.ts
-│   └── socket.interface.ts
+├── routes/
+│   ├── auth
+│   |   └── auth.routes.ts
+│   ├── notifications
+│   |   └── notification.routes.ts
+│   ├── pqrs
+|   |   ├── pqr.routes.ts
+│   |   └── pqrMessage.routes.ts
+│   ├── users
+|   |   ├── profile.routes.ts
+|   |   └── user.routes.ts
+│   └── index.ts
+│
+├── services/
+│   ├── auth
+│   |   └── auth.service.ts
+│   ├── notifications
+│   |   └── notification.service.ts
+│   ├── pqrs
+|   |   ├── pqr.service.ts
+|   |   ├── pqrAttachment.service.ts
+│   |   └── pqrMessage.service.ts
+│   └── users
+|       └─ user.service.ts
 │
 ├── sockets/
+│   ├── index.socket.ts
+│   ├── notification.socket.ts
 │   └── pqr.socket.ts
 │
-├── utils/
+└── Utils/
+    └── validators.ts
 ```
 
 ---
@@ -97,10 +135,10 @@ src/
 | ----------- | ----------------------------------------------------------------------------------- |
 | config      | Configuraciones generales del proyecto, cliente Prisma y configuración de Socket.IO |
 | controllers | Controladores de las peticiones HTTP                                                |
+| interfaces  | Interfaces y tipados TypeScript reutilizables                                       |
+| middlewares | Middlewares personalizados para autenticación y validaciones                        |
 | routes      | Definición y agrupación de rutas de la API                                          |
 | services    | Lógica de negocio y conexión con Prisma                                             |
-| middlewares | Middlewares personalizados para autenticación y validaciones                        |
-| interfaces  | Interfaces y tipados TypeScript reutilizables                                       |
 | sockets     | Eventos de Socket.IO para funcionalidades en tiempo real                            |
 | utils       | Funciones reutilizables                                                             |
 
