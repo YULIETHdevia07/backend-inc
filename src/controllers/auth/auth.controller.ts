@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { registerUsersBulkService, registerUserService } from "../services/auth.service.js";
+import { registerUsersBulkService, registerUserService } from "../../services/auth/auth.service.js";
 
 export const registerUser = async (
     req: Request,

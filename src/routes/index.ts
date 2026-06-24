@@ -1,11 +1,11 @@
 import { Router } from "express";
 
-import userRoutes from "./user.routes.js";
-import profileRoutes from "./profile.routes.js";
-import pqrRoutes from "./pqr.routes.js";
-import authRoutes from "./auth.routes.js"
-import pqrMessageRoutes from "./pqrMessage.routes.js";
-import notificationRoutes from "./notification.routes.js";
+import userRoutes from "./users/user.routes.js";
+import profileRoutes from "./users/profile.routes.js";
+import pqrRoutes from "./pqrs/pqr.routes.js";
+import authRoutes from "./auth/auth.routes.js"
+import pqrMessageRoutes from "./pqrs/pqrMessage.routes.js";
+import notificationRoutes from "./notifications/notification.routes.js";
 
 const router = Router();
 

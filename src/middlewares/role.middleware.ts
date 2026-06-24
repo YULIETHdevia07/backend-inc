@@ -1,5 +1,5 @@
 import type { Response, NextFunction } from "express";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
+import type { AuthRequest } from "../interfaces/auth/auth.interface.js";
 import type { Role } from "@prisma/client";
 
 

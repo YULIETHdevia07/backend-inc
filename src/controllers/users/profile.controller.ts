@@ -1,6 +1,6 @@
 import type { Response } from "express";
-import prisma from "../config/client.js";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
+import prisma from "../../config/client.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
 
 export const getProfile = async (
   req: AuthRequest,

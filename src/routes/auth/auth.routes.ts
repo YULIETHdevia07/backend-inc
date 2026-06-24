@@ -2,10 +2,10 @@ import { Router } from "express";
 import {
   registerUser,
   registerUsersBulk,
-} from "../controllers/auth.controller.js";
-import { uploadExcel } from "../middlewares/upload.middleware.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { roleMiddleware } from "../middlewares/role.middleware.js";
+} from "../../controllers/auth/auth.controller.js";
+import { uploadExcel } from "../../middlewares/upload.middleware.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { roleMiddleware } from "../../middlewares/role.middleware.js";
 
 const router = Router();
 

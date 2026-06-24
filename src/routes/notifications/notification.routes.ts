@@ -4,8 +4,8 @@ import {
     getUnreadNotificationsCountController,
     markAllNotificationsAsReadController,
     markNotificationAsReadController,
-} from "../controllers/notification.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
+} from "../../controllers/notifications/notification.controller.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
 
 const router = Router();
 

@@ -5,9 +5,9 @@ import {
   getAgents,
   loginUser,
   updateUserRole,
-} from "../controllers/user.controller.js";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { roleMiddleware } from "../middlewares/role.middleware.js";
+} from "../../controllers/users/user.controller.js";
+import { authMiddleware } from "../../middlewares/auth.middleware.js";
+import { roleMiddleware } from "../../middlewares/role.middleware.js";
 
 const router = Router();
 

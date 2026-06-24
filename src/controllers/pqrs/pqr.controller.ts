@@ -13,8 +13,8 @@ import {
   ratePqrService,
   assignPqrService,
   unassignPqrService,
-} from "../services/pqr.service.js";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
+} from "../../services/pqrs/pqr.service.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
 import { PqrStatus, PqrCaseType, PqrPriority } from "@prisma/client";
 
 export const createPqr = async (

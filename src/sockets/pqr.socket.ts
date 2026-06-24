@@ -1,6 +1,6 @@
 import type { Server } from "socket.io";
-import type { AuthSocket } from "../interfaces/socket.interface.js";
-import { createPqrMessageService } from "../services/pqrMessage.service.js";
+import type { AuthSocket } from "../interfaces/sockets/socket.interface.js";
+import { createPqrMessageService } from "../services/pqrs/pqrMessage.service.js";
 import prisma from "../config/client.js";
 
 // Cuenta los mensajes no revisados de una PQR para un usuario específico.

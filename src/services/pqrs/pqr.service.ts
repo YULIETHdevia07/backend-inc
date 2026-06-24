@@ -1,7 +1,7 @@
-import prisma from "../config/client.js";
-import type { CreatePqrData, RatePqrData } from "../interfaces/pqr.interface.js";
+import prisma from "../../config/client.js";
+import type { CreatePqrData, RatePqrData } from "../../interfaces/pqrs/pqr.interface.js";
 import { PqrPriority, PqrStatus, Role } from "@prisma/client";
-import { buildPqrAttachmentData } from "./storage.service.js";
+import { buildPqrAttachmentData } from "./pqrAttachment.service.js";
 import {
   notifyAdminsAndAgentsAboutNewPqrService,
   notifyAdminsAboutTakenPqrService,
@@ -10,7 +10,7 @@ import {
   notifyAboutRatedPqrService,
   notifyAgentAboutAssignedPqrService,
   notifyAgentAboutUnassignedPqrService,
-} from "./notification.service.js";
+} from "../notifications/notification.service.js";
 
 // Cuenta los mensajes no revisados de una PQR para un usuario específico.
 const getUnreadMessagesCount = async (

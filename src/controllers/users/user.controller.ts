@@ -3,11 +3,11 @@ import {
   getUserByIdService,
   updateUserRoleService,
   getAgentsService,
-} from "../services/user.service.js";
+} from "../../services/users/user.service.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import prisma from "../config/client.js";
+import prisma from "../../config/client.js";
 
 export const getUsers = async (
   req: Request,

@@ -1,16 +1,16 @@
 import bcrypt from "bcryptjs";
 import * as XLSX from "xlsx";
 import { Role } from "@prisma/client";
-import prisma from "../config/client.js";
+import prisma from "../../config/client.js";
 
 import type {
   BulkRegisterUserColumnError,
   BulkRegisterUserData,
   BulkRegisterUserError,
   RegisterUserData,
-} from "../interfaces/auth.interface.js";
+} from "../../interfaces/auth/auth.interface.js";
 
-import { isValidEmail, isValidName } from "../utils/validators.js";
+import { isValidEmail, isValidName } from "../../utils/validators.js";
 
 export const registerUserService = async ({
   name,

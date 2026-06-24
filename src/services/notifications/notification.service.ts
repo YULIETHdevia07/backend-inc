@@ -1,8 +1,8 @@
-import { getIo } from "../config/socket.js";
-import { emitNotificationToUser } from "../sockets/notification.socket.js";
+import { getIo } from "../../config/socket.js";
+import { emitNotificationToUser } from "../../sockets/notification.socket.js";
 import { NotificationType, Role } from "@prisma/client";
-import prisma from "../config/client.js";
-import type { CreateNotificationData } from "../interfaces/notification.interface.js";
+import prisma from "../../config/client.js";
+import type { CreateNotificationData } from "../../interfaces/notifications/notification.interface.js";
 
 // Crea una notificación para un usuario específico
 export const createNotificationService = async (

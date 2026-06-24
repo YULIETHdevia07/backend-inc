@@ -1,12 +1,12 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
 import {
     createPqrMessageWithAttachmentService,
     getPqrMessagesService,
     markPqrChatAsReadService,
-} from "../services/pqrMessage.service.js";
-import { getIo } from "../config/socket.js";
-import prisma from "../config/client.js";
+} from "../../services/pqrs/pqrMessage.service.js";
+import { getIo } from "../../config/socket.js";
+import prisma from "../../config/client.js";
 
 // Cuenta los mensajes no revisados de una PQR para un usuario específico.
 const getUnreadMessagesCount = async (

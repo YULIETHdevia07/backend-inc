@@ -1,10 +1,10 @@
 import type { Role } from "@prisma/client";
-import prisma from "../config/client.js";
+import prisma from "../../config/client.js";
 import type {
     CreatePqrMessageData,
     CreatePqrMessageWithAttachmentData,
-} from "../interfaces/pqrMessage.interface.js";
-import { buildPqrAttachmentData } from "./storage.service.js";
+} from "../../interfaces/pqrs/pqrMessage.interface.js";
+import { buildPqrAttachmentData } from "./pqrAttachment.service.js";
 
 // Valida si el usuario puede interactuar con la PQR.
 const validatePqrAccess = async (

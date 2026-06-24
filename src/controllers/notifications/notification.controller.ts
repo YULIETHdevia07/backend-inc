@@ -1,12 +1,11 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../interfaces/auth.interface.js";
-
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
 import {
     getUserNotificationsService,
     getUnreadNotificationsCountService,
     markAllNotificationsAsReadService,
     markNotificationAsReadService,
-} from "../services/notification.service.js";
+} from "../../services/notifications/notification.service.js";
 
 // Obtiene las notificaciones del usuario autenticado
 export const getNotificationsController = async (
