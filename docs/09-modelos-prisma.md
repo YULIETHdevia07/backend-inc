@@ -13,6 +13,10 @@ PqrMessage
 PqrChatRead
 PqrMessageAttachment
 Notification
+Department
+PositionProfile
+City
+PersonnelRequisition
 ```
 
 ---
@@ -37,23 +41,26 @@ model User {
   pqrMessages   PqrMessage[]
   notifications Notification[]
   pqrChatReads  PqrChatRead[]
+
+  personnelRequisitions PersonnelRequisition[]
 }
 ```
 
 ## Descripción de campos
 
-| Campo         | Tipo           | Descripción                                                        |
-| ------------- | -------------- | ------------------------------------------------------------------ |
-| id            | Int            | Identificador único del usuario                                    |
-| name          | String         | Nombre del usuario                                                 |
-| email         | String         | Correo electrónico único del usuario                               |
-| password      | String         | Contraseña encriptada del usuario                                  |
-| role          | Role           | Rol del usuario dentro del sistema                                 |
-| pqrsCreated   | PQR[]          | Relación con las PQR creadas por el usuario                        |
-| pqrsAssigned  | PQR[]          | Relación con las PQR asignadas al usuario cuando actúa como agente |
-| pqrMessages   | PqrMessage[]   | Relación con los mensajes enviados por el usuario                  |
-| notifications | Notification[] | Relación con las notificaciones asociadas al usuario               |
-| pqrChatReads  | PqrChatRead[]  | Relación con los registros de lectura de chats del usuario         |
+| Campo                 | Tipo                   | Descripción                                                        |
+| --------------------- | ---------------------- | ------------------------------------------------------------------ |
+| id                    | Int                    | Identificador único del usuario                                    |
+| name                  | String                 | Nombre del usuario                                                 |
+| email                 | String                 | Correo electrónico único del usuario                               |
+| password              | String                 | Contraseña encriptada del usuario                                  |
+| role                  | Role                   | Rol del usuario dentro del sistema                                 |
+| pqrsCreated           | PQR[]                  | Relación con las PQR creadas por el usuario                        |
+| pqrsAssigned          | PQR[]                  | Relación con las PQR asignadas al usuario cuando actúa como agente |
+| pqrMessages           | PqrMessage[]           | Relación con los mensajes enviados por el usuario                  |
+| notifications         | Notification[]         | Relación con las notificaciones asociadas al usuario               |
+| pqrChatReads          | PqrChatRead[]          | Relación con los registros de lectura de chats del usuario         |
+| personnelRequisitions | PersonnelRequisition[] | Relación con las requisiciones de personal creadas por el usuario  |
 
 ---
 
@@ -283,6 +290,168 @@ model Notification {
 | createdAt | DateTime         | Fecha de creación de la notificación               |
 | user      | User             | Relación con el usuario que recibe la notificación |
 | pqr       | PQR?             | Relación con la PQR asociada a la notificación     |
+
+---
+
+# Modelo Department
+
+## Descripción
+
+El modelo `Department` representa las áreas o departamentos solicitantes dentro del módulo de Talento Humano.
+
+
+```prisma
+model Department {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+## Descripción de campos
+
+| Campo        | Tipo                   | Descripción                                      |
+| ------------ | ---------------------- | ------------------------------------------------ |
+| id           | Int                    | Identificador único del área o departamento      |
+| code         | String                 | Código del documento o área                      |
+| name         | String                 | Nombre del área o departamento                   |
+| isActive     | Boolean                | Indica si el área está activa o inactiva         |
+| requisitions | PersonnelRequisition[] | Relación con las requisiciones asociadas al área |
+| createdAt    | DateTime               | Fecha de creación del registro                   |
+| updatedAt    | DateTime               | Fecha de última actualización del registro       |
+
+---
+
+# Modelo PositionProfile
+
+## Descripción
+
+El modelo `PositionProfile` representa los cargos o perfiles de cargo disponibles para crear una requisición de personal.
+
+```prisma
+model PositionProfile {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+## Descripción de campos
+
+| Campo        | Tipo                   | Descripción                                       |
+| ------------ | ---------------------- | ------------------------------------------------- |
+| id           | Int                    | Identificador único del cargo o perfil            |
+| code         | String                 | Código del perfil de cargo                        |
+| name         | String                 | Nombre del cargo o perfil                         |
+| isActive     | Boolean                | Indica si el cargo está activo o inactivo         |
+| requisitions | PersonnelRequisition[] | Relación con las requisiciones asociadas al cargo |
+| createdAt    | DateTime               | Fecha de creación del registro                    |
+| updatedAt    | DateTime               | Fecha de última actualización del registro        |
+
+---
+
+# Modelo City
+
+## Descripción
+
+El modelo `City` representa las ciudades disponibles para una requisición de personal.
+
+Esta tabla permite controlar desde la base de datos las ciudades que se mostrarán en el formulario.
+
+```prisma
+model City {
+  id       Int     @id @default(autoincrement())
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+## Descripción de campos
+
+| Campo        | Tipo                   | Descripción                                          |
+| ------------ | ---------------------- | ---------------------------------------------------- |
+| id           | Int                    | Identificador único de la ciudad                     |
+| name         | String                 | Nombre de la ciudad                                  |
+| isActive     | Boolean                | Indica si la ciudad está activa o inactiva           |
+| requisitions | PersonnelRequisition[] | Relación con las requisiciones asociadas a la ciudad |
+| createdAt    | DateTime               | Fecha de creación del registro                       |
+| updatedAt    | DateTime               | Fecha de última actualización del registro           |
+
+---
+
+# Modelo PersonnelRequisition
+
+## Descripción
+
+El modelo `PersonnelRequisition` representa las requisiciones de personal creadas desde el módulo de Talento Humano.
+
+```prisma
+model PersonnelRequisition {
+  id Int @id @default(autoincrement())
+
+  requestDate DateTime @default(now())
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  positionId Int
+  position   PositionProfile @relation(fields: [positionId], references: [id])
+
+  reason      RequisitionReason
+  otherReason String? @db.VarChar(300)
+
+  cityId Int
+  city   City @relation(fields: [cityId], references: [id])
+
+  proposedSalary Decimal @db.Decimal(12, 2)
+
+  status RequisitionStatus @default(PENDIENTE)
+
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+```
+
+## Descripción de campos
+
+| Campo          | Tipo              | Descripción                                       |
+| -------------- | ----------------- | ------------------------------------------------- |
+| id             | Int               | Identificador único de la requisición             |
+| requestDate    | DateTime          | Fecha automática en que se crea la requisición    |
+| departmentId   | Int               | Identificador del área solicitante                |
+| department     | Department        | Relación con el área solicitante                  |
+| positionId     | Int               | Identificador del cargo requerido                 |
+| position       | PositionProfile   | Relación con el cargo requerido                   |
+| reason         | RequisitionReason | Motivo de la requisición                          |
+| otherReason    | String?           | Descripción adicional cuando el motivo es `OTROS` |
+| cityId         | Int               | Identificador de la ciudad                        |
+| city           | City              | Relación con la ciudad                            |
+| proposedSalary | Decimal           | Salario propuesto para el cargo                   |
+| status         | RequisitionStatus | Estado de la requisición                          |
+| createdById    | Int               | Identificador del usuario que creó la requisición |
+| createdBy      | User              | Relación con el usuario creador                   |
+| createdAt      | DateTime          | Fecha de creación del registro                    |
+| updatedAt      | DateTime          | Fecha de última actualización del registro        |
 
 ---
 

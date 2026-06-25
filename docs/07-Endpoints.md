@@ -3099,39 +3099,640 @@ AGENT
 }
 ```
 
+---
+
+# Obtener ciudades activas
+
+## Endpoint protegido
+
+```http
+GET /api/common/cities
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener las ciudades activas registradas en el sistema.
+
+Este endpoint pertenece al módulo común del proyecto, ya que las ciudades son información global y pueden ser utilizadas por diferentes módulos.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Ciudades obtenidas correctamente",
+  "cities": [
+    {
+      "id": 1,
+      "name": "Barranquilla"
+    },
+    {
+      "id": 2,
+      "name": "Bogotá"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Token no proporcionado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener las ciudades"
+}
+```
+
+---
+
+# Obtener áreas activas de Talento Humano
+
+## Endpoint protegido
+
+```http
+GET /api/human-talent/departments
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener las áreas activas disponibles para crear una requisición de personal.
+
+Este endpoint permite cargar el listado de áreas solicitantes en el formulario de requisición.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Áreas obtenidas correctamente",
+  "departments": [
+    {
+      "id": 1,
+      "code": "ORG-TH-0000",
+      "name": "Laboratorios Incobra S.A."
+    },
+    {
+      "id": 2,
+      "code": "ORG-TH-0005",
+      "name": "Talento Humano"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Token no proporcionado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener las áreas"
+}
+```
+
+---
+
+# Obtener perfiles de cargo activos
+
+## Endpoint protegido
+
+```http
+GET /api/human-talent/position-profiles
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener los perfiles de cargo activos disponibles para una requisición de personal.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Perfiles de cargo obtenidos correctamente",
+  "positionProfiles": [
+    {
+      "id": 1,
+      "code": "DPC-TH-0003",
+      "name": "Jefe de Talento Humano"
+    },
+    {
+      "id": 2,
+      "code": "DPC-TH-0008",
+      "name": "Jefe de Producción"
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Token no proporcionado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener los perfiles de cargo"
+}
+```
+
+---
+
+# Crear requisición de personal
+
+## Endpoint protegido
+
+```http
+POST /api/human-talent/requisitions
+```
+
+## Descripción
+
+Endpoint privado encargado de crear una nueva requisición de personal desde el módulo de Talento Humano.
+
+Al crear la requisición, el sistema registra automáticamente:
+
+* Fecha de solicitud.
+* Estado inicial `PENDIENTE`.
+* Usuario que creó la requisición.
+* Fecha de creación.
+* Fecha de actualización.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Body
+
+```json
+{
+  "departmentId": 1,
+  "positionId": 1,
+  "reason": "CARGO_NUEVO",
+  "otherReason": null,
+  "cityId": 1,
+  "proposedSalary": 2500000
+}
+```
+
+---
+
+## Campos del body
+
+| Campo          | Tipo        | Obligatorio | Descripción                                       |
+| -------------- | ----------- | ----------- | ------------------------------------------------- |
+| departmentId   | number      | Sí          | Identificador del área solicitante                |
+| positionId     | number      | Sí          | Identificador del cargo requerido                 |
+| reason         | string      | Sí          | Motivo de la requisición                          |
+| otherReason    | string/null | No          | Descripción adicional cuando el motivo es `OTROS` |
+| cityId         | number      | Sí          | Identificador de la ciudad                        |
+| proposedSalary | number      | Sí          | Salario propuesto para el cargo                   |
+
+---
+
+## Motivos permitidos
+
+```txt
+CARGO_NUEVO
+REEMPLAZO_RETIRO
+INCREMENTO_PRODUCCION
+SOLICITUD_PRACTICANTES
+OTROS
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Requisición de personal creada correctamente",
+  "requisition": {
+    "id": 1,
+    "requestDate": "2026-06-25T00:00:00.000Z",
+    "departmentId": 1,
+    "positionId": 1,
+    "reason": "CARGO_NUEVO",
+    "otherReason": null,
+    "cityId": 1,
+    "proposedSalary": "2500000",
+    "status": "PENDIENTE",
+    "createdById": 1,
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "updatedAt": "2026-06-25T00:00:00.000Z",
+    "department": {
+      "id": 1,
+      "code": "ORG-TH-0000",
+      "name": "Laboratorios Incobra S.A."
+    },
+    "position": {
+      "id": 1,
+      "code": "DPC-TH-0003",
+      "name": "Jefe de Talento Humano"
+    },
+    "city": {
+      "id": 1,
+      "name": "Barranquilla"
+    },
+    "createdBy": {
+      "id": 1,
+      "name": "Juan",
+      "email": "juan@gmail.com",
+      "role": "USER"
+    }
+  }
+}
+```
+
+---
+
+## Respuesta si faltan campos obligatorios
+
+```json
+{
+  "message": "Todos los campos obligatorios deben ser enviados"
+}
+```
+
+---
+
+## Respuesta si el motivo no es válido
+
+```json
+{
+  "message": "Motivo de requisición no válido",
+  "allowedReasons": [
+    "CARGO_NUEVO",
+    "REEMPLAZO_RETIRO",
+    "INCREMENTO_PRODUCCION",
+    "SOLICITUD_PRACTICANTES",
+    "OTROS"
+  ]
+}
+```
+
+---
+
+## Respuesta si el motivo es `OTROS` y no se especifica descripción
+
+```json
+{
+  "message": "Debe especificar el motivo de la requisición"
+}
+```
+
+---
+
+## Respuesta si el área no existe o está inactiva
+
+```json
+{
+  "message": "El área solicitante no existe o está inactiva"
+}
+```
+
+---
+
+## Respuesta si el cargo no existe o está inactivo
+
+```json
+{
+  "message": "El cargo requerido no existe o está inactivo"
+}
+```
+
+---
+
+## Respuesta si la ciudad no existe o está inactiva
+
+```json
+{
+  "message": "La ciudad no existe o está inactiva"
+}
+```
+
+---
+
+## Respuesta si el salario no es válido
+
+```json
+{
+  "message": "El salario propuesto debe ser mayor a cero"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al crear la requisición de personal"
+}
+```
+
+---
+
+# Obtener requisiciones de personal
+
+## Endpoint protegido
+
+```http
+GET /api/human-talent/requisitions
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener el listado de requisiciones de personal registradas en el sistema.
+
+Las requisiciones se devuelven ordenadas desde la más reciente hasta la más antigua.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Requisiciones de personal obtenidas correctamente",
+  "requisitions": [
+    {
+      "id": 1,
+      "requestDate": "2026-06-25T00:00:00.000Z",
+      "departmentId": 1,
+      "positionId": 1,
+      "reason": "CARGO_NUEVO",
+      "otherReason": null,
+      "cityId": 1,
+      "proposedSalary": "2500000",
+      "status": "PENDIENTE",
+      "createdById": 1,
+      "createdAt": "2026-06-25T00:00:00.000Z",
+      "updatedAt": "2026-06-25T00:00:00.000Z",
+      "department": {
+        "id": 1,
+        "code": "ORG-TH-0000",
+        "name": "Laboratorios Incobra S.A."
+      },
+      "position": {
+        "id": 1,
+        "code": "DPC-TH-0003",
+        "name": "Jefe de Talento Humano"
+      },
+      "city": {
+        "id": 1,
+        "name": "Barranquilla"
+      },
+      "createdBy": {
+        "id": 1,
+        "name": "Juan",
+        "email": "juan@gmail.com",
+        "role": "USER"
+      }
+    }
+  ]
+}
+```
+
+---
+
+## Respuesta si no existen requisiciones
+
+```json
+{
+  "message": "Requisiciones de personal obtenidas correctamente",
+  "requisitions": []
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener las requisiciones de personal"
+}
+```
 
 ---
 
 # Resumen actualizado de endpoints funcionales
 
-| Método | Endpoint                          | Descripción                                                | Acceso               |
-| ------ | --------------------------------- | ---------------------------------------------------------- | -------------------- |
-| GET    | /api/health                       | Verifica el funcionamiento de la API                       | Público              |
-| GET    | /api/users                        | Obtiene todos los usuarios registrados                     | ADMIN                |
-| POST   | /api/auth/register                | Registra un nuevo usuario                                  | Público              |
-| POST   | /api/auth/register/bulk           | Registra usuarios mediante carga masiva desde Excel        | ADMIN                |
-| POST   | /api/auth/login                   | Inicia sesión y genera token JWT                           | Público              |
-| GET    | /api/profile                      | Obtiene el perfil del usuario autenticado                  | Usuario autenticado  |
-| POST   | /api/pqrs                         | Crea una nueva PQR                                         | USER / ADMIN         |
-| GET    | /api/pqrs/my                      | Obtiene las PQR del usuario autenticado                    | USER / ADMIN         |
-| GET    | /api/pqrs                         | Obtiene todas las PQR del sistema                          | ADMIN                |
-| GET    | /api/pqrs/available               | Obtiene las PQR pendientes sin responsable                 | ADMIN / AGENT        |
-| GET    | /api/pqrs/assigned/my             | Obtiene las PQR asignadas al AGENT autenticado             | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/take                | Permite que un AGENT tome una PQR disponible               | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/status              | Cambia el estado de una PQR                                | ADMIN / AGENT        |
-| PATCH  | /api/users/:id/role               | Cambia el rol de un usuario                                | ADMIN                |
-| PATCH  | /api/pqrs/:id/priority            | Cambia la prioridad de una PQR                             | ADMIN / AGENT        |
-| GET    | /api/pqrs/:id/messages            | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/messages/read       | Marca como leído el chat de una PQR                        | USER / AGENT         |
-| PATCH  | /api/pqrs/:id/rate                | Permite calificar una PQR cerrada                          | USER                 |
-| GET    | /api/notifications                | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT |
-| GET    | /api/notifications/unread-count   | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/:id/read       | Marca una notificación como leída                          | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/read-all       | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT |
-| POST   | /api/pqrs/:id/messages/attachment | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/assign              | Asigna o reasigna una PQR a un agente específico           | ADMIN                |
-| PATCH  | /api/pqrs/:id/unassign            | Desasigna una PQR y la deja nuevamente disponible          | ADMIN                |
-| GET    | /api/users/agents                 | Obtiene únicamente los usuarios con rol AGENT              | ADMIN                |
+| Método | Endpoint                            | Descripción                                                | Acceso               |
+| ------ | ----------------------------------- | ---------------------------------------------------------- | -------------------- |
+| GET    | /api/health                         | Verifica el funcionamiento de la API                       | Público              |
+| GET    | /api/users                          | Obtiene todos los usuarios registrados                     | ADMIN                |
+| POST   | /api/auth/register                  | Registra un nuevo usuario                                  | Público              |
+| POST   | /api/auth/register/bulk             | Registra usuarios mediante carga masiva desde Excel        | ADMIN                |
+| POST   | /api/auth/login                     | Inicia sesión y genera token JWT                           | Público              |
+| GET    | /api/profile                        | Obtiene el perfil del usuario autenticado                  | Usuario autenticado  |
+| POST   | /api/pqrs                           | Crea una nueva PQR                                         | USER / ADMIN         |
+| GET    | /api/pqrs/my                        | Obtiene las PQR del usuario autenticado                    | USER / ADMIN         |
+| GET    | /api/pqrs                           | Obtiene todas las PQR del sistema                          | ADMIN                |
+| GET    | /api/pqrs/available                 | Obtiene las PQR pendientes sin responsable                 | ADMIN / AGENT        |
+| GET    | /api/pqrs/assigned/my               | Obtiene las PQR asignadas al AGENT autenticado             | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/take                  | Permite que un AGENT tome una PQR disponible               | ADMIN / AGENT        |
+| PATCH  | /api/pqrs/:id/status                | Cambia el estado de una PQR                                | ADMIN / AGENT        |
+| PATCH  | /api/users/:id/role                 | Cambia el rol de un usuario                                | ADMIN                |
+| PATCH  | /api/pqrs/:id/priority              | Cambia la prioridad de una PQR                             | ADMIN / AGENT        |
+| GET    | /api/pqrs/:id/messages              | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/messages/read         | Marca como leído el chat de una PQR                        | USER / AGENT         |
+| PATCH  | /api/pqrs/:id/rate                  | Permite calificar una PQR cerrada                          | USER                 |
+| GET    | /api/notifications                  | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT |
+| GET    | /api/notifications/unread-count     | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/:id/read         | Marca una notificación como leída                          | USER / ADMIN / AGENT |
+| PATCH  | /api/notifications/read-all         | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT |
+| POST   | /api/pqrs/:id/messages/attachment   | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN |
+| PATCH  | /api/pqrs/:id/assign                | Asigna o reasigna una PQR a un agente específico           | ADMIN                |
+| PATCH  | /api/pqrs/:id/unassign              | Desasigna una PQR y la deja nuevamente disponible          | ADMIN                |
+| GET    | /api/users/agents                   | Obtiene únicamente los usuarios con rol AGENT              | ADMIN                |
+| GET    | /api/common/cities                  | Obtiene las ciudades activas del sistema                   | USER / ADMIN / AGENT |
+| GET    | /api/human-talent/departments       | Obtiene las áreas activas para requisición de personal     | USER / ADMIN / AGENT |
+| GET    | /api/human-talent/position-profiles | Obtiene los perfiles de cargo activos                      | USER / ADMIN / AGENT |
+| GET    | /api/human-talent/requisitions      | Obtiene las requisiciones de personal registradas          | USER / ADMIN / AGENT |
+| POST   | /api/human-talent/requisitions      | Crea una nueva requisición de personal                     | USER / ADMIN / AGENT |
 
 ---
 

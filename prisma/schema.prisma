@@ -55,6 +55,21 @@ enum PqrAttachmentType {
   DOCUMENT
 }
 
+enum RequisitionReason {
+  CARGO_NUEVO
+  REEMPLAZO_RETIRO
+  INCREMENTO_PRODUCCION
+  SOLICITUD_PRACTICANTES
+  OTROS
+}
+
+enum RequisitionStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -68,6 +83,8 @@ model User {
   pqrMessages   PqrMessage[]
   notifications Notification[]
   pqrChatReads  PqrChatRead[]
+
+  personnelRequisitions PersonnelRequisition[]
 }
 
 model PQR {
@@ -147,4 +164,67 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id])
   pqr  PQR? @relation(fields: [pqrId], references: [id])
+}
+
+model Department {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PositionProfile {
+  id       Int     @id @default(autoincrement())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model City {
+  id       Int     @id @default(autoincrement())
+  name     String
+  isActive Boolean @default(true)
+
+  requisitions PersonnelRequisition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PersonnelRequisition {
+  id Int @id @default(autoincrement())
+
+  requestDate DateTime @default(now())
+
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  positionId Int
+  position   PositionProfile @relation(fields: [positionId], references: [id])
+
+  reason      RequisitionReason
+  otherReason String?           @db.VarChar(300)
+
+  cityId Int
+  city   City @relation(fields: [cityId], references: [id])
+
+  proposedSalary Decimal @db.Decimal(12, 2)
+
+  status RequisitionStatus @default(PENDIENTE)
+
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
