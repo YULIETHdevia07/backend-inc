@@ -3405,6 +3405,10 @@ AGENT
   "reason": "CARGO_NUEVO",
   "otherReason": null,
   "cityId": 1,
+  "contractType": "DIRECTO",
+  "directContractType": "FIJO",
+  "contractDurationMonths": 12,
+  "internContractType": null,
   "proposedSalary": 2500000
 }
 ```
@@ -3413,14 +3417,18 @@ AGENT
 
 ## Campos del body
 
-| Campo          | Tipo        | Obligatorio | Descripción                                       |
-| -------------- | ----------- | ----------- | ------------------------------------------------- |
-| departmentId   | number      | Sí          | Identificador del área solicitante                |
-| positionId     | number      | Sí          | Identificador del cargo requerido                 |
-| reason         | string      | Sí          | Motivo de la requisición                          |
-| otherReason    | string/null | No          | Descripción adicional cuando el motivo es `OTROS` |
-| cityId         | number      | Sí          | Identificador de la ciudad                        |
-| proposedSalary | number      | Sí          | Salario propuesto para el cargo                   |
+| Campo | Tipo | Obligatorio | Descripción |
+| ----- | ---- | ----------- | ----------- |
+| departmentId | number | Sí | Identificador del área solicitante |
+| positionId | number | Sí | Identificador del cargo requerido |
+| reason | string | Sí | Motivo de la requisición |
+| otherReason | string/null | No | Descripción adicional cuando el motivo es `OTROS` |
+| cityId | number | Sí | Identificador de la ciudad |
+| contractType | string | Sí | Tipo principal de contratación |
+| directContractType | string/null | No | Tipo de contrato directo cuando `contractType` es `DIRECTO` |
+| contractDurationMonths | number/null | No | Duración del contrato en meses cuando aplica |
+| internContractType | string/null | No | Tipo de practicante cuando `contractType` es `PRACTICANTE` |
+| proposedSalary | number | Sí | Salario propuesto para el cargo |
 
 ---
 
@@ -3432,6 +3440,97 @@ REEMPLAZO_RETIRO
 INCREMENTO_PRODUCCION
 SOLICITUD_PRACTICANTES
 OTROS
+```
+
+---
+
+## Tipos de contratación permitidos
+
+```txt
+DIRECTO
+TEMPORAL
+PRACTICANTE
+```
+
+---
+
+## Tipos de contrato directo permitidos
+
+```txt
+INDEFINIDO
+FIJO
+```
+
+---
+
+## Tipos de practicante permitidos
+
+```txt
+APRENDIZ
+PASANTE
+ROTANTE
+```
+
+---
+
+## Reglas de contratación
+
+### Contrato directo indefinido 
+
+Cuando `contractType` es `DIRECTO` y `directContractType` es `INDEFINIDO`, no se requiere duración en meses.
+
+```json
+{
+  "contractType": "DIRECTO",
+  "directContractType": "INDEFINIDO",
+  "contractDurationMonths": null,
+  "internContractType": null
+}
+```
+
+---
+
+### Contrato directo fijo
+
+Cuando `contractType` es `DIRECTO` y `directContractType` es `FIJO`, se debe enviar la duración en meses.
+
+```json
+{
+  "contractType": "DIRECTO",
+  "directContractType": "FIJO",
+  "contractDurationMonths": 12,
+  "internContractType": null
+}
+```
+
+---
+
+### Contrato temporal
+
+Cuando `contractType` es `TEMPORAL`, se debe enviar la duración en meses.
+
+```json
+{
+  "contractType": "TEMPORAL",
+  "directContractType": null,
+  "contractDurationMonths": 6,
+  "internContractType": null
+}
+```
+
+---
+
+### Practicante
+
+Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
+
+```json
+{
+  "contractType": "PRACTICANTE",
+  "directContractType": null,
+  "contractDurationMonths": null,
+  "internContractType": "APRENDIZ"
+}
 ```
 
 ---
@@ -3449,6 +3548,10 @@ OTROS
     "reason": "CARGO_NUEVO",
     "otherReason": null,
     "cityId": 1,
+    "contractType": "DIRECTO",
+    "directContractType": "FIJO",
+    "contractDurationMonths": 12,
+    "internContractType": null,
     "proposedSalary": "2500000",
     "status": "PENDIENTE",
     "createdById": 1,
@@ -3512,6 +3615,80 @@ OTROS
 ```json
 {
   "message": "Debe especificar el motivo de la requisición"
+}
+```
+
+---
+
+## Respuesta si el tipo de contratación no es válido
+
+```json
+{
+  "message": "Tipo de contratación no válido",
+  "allowedContractTypes": [
+    "DIRECTO",
+    "TEMPORAL",
+    "PRACTICANTE"
+  ]
+}
+```
+
+---
+
+## Respuesta si el tipo de contrato directo no es válido
+
+```json
+{
+  "message": "Tipo de contrato directo no válido",
+  "allowedDirectContractTypes": [
+    "INDEFINIDO",
+    "FIJO"
+  ]
+}
+```
+
+---
+
+## Respuesta si el tipo de practicante no es válido
+
+```json
+{
+  "message": "Tipo de practicante no válido",
+  "allowedInternContractTypes": [
+    "APRENDIZ",
+    "PASANTE",
+    "ROTANTE"
+  ]
+}
+```
+
+---
+
+## Respuesta si falta duración para contrato fijo
+
+```json
+{
+  "message": "Debe indicar la duración del contrato fijo en meses"
+}
+```
+
+---
+
+## Respuesta si falta duración para contrato temporal
+
+```json
+{
+  "message": "Debe indicar la duración del contrato temporal en meses"
+}
+```
+
+---
+
+## Respuesta si falta tipo de practicante
+
+```json
+{
+  "message": "Debe seleccionar el tipo de practicante"
 }
 ```
 
@@ -3625,6 +3802,10 @@ AGENT
       "reason": "CARGO_NUEVO",
       "otherReason": null,
       "cityId": 1,
+      "contractType": "DIRECTO",
+      "directContractType": "FIJO",
+      "contractDurationMonths": 12,
+      "internContractType": null,
       "proposedSalary": "2500000",
       "status": "PENDIENTE",
       "createdById": 1,

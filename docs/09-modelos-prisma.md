@@ -420,6 +420,13 @@ model PersonnelRequisition {
   cityId Int
   city   City @relation(fields: [cityId], references: [id])
 
+  contractType ContractType?
+
+  directContractType DirectContractType?
+  contractDurationMonths Int?
+
+  internContractType InternContractType?
+
   proposedSalary Decimal @db.Decimal(12, 2)
 
   status RequisitionStatus @default(PENDIENTE)
@@ -434,24 +441,28 @@ model PersonnelRequisition {
 
 ## Descripción de campos
 
-| Campo          | Tipo              | Descripción                                       |
-| -------------- | ----------------- | ------------------------------------------------- |
-| id             | Int               | Identificador único de la requisición             |
-| requestDate    | DateTime          | Fecha automática en que se crea la requisición    |
-| departmentId   | Int               | Identificador del área solicitante                |
-| department     | Department        | Relación con el área solicitante                  |
-| positionId     | Int               | Identificador del cargo requerido                 |
-| position       | PositionProfile   | Relación con el cargo requerido                   |
-| reason         | RequisitionReason | Motivo de la requisición                          |
-| otherReason    | String?           | Descripción adicional cuando el motivo es `OTROS` |
-| cityId         | Int               | Identificador de la ciudad                        |
-| city           | City              | Relación con la ciudad                            |
-| proposedSalary | Decimal           | Salario propuesto para el cargo                   |
-| status         | RequisitionStatus | Estado de la requisición                          |
-| createdById    | Int               | Identificador del usuario que creó la requisición |
-| createdBy      | User              | Relación con el usuario creador                   |
-| createdAt      | DateTime          | Fecha de creación del registro                    |
-| updatedAt      | DateTime          | Fecha de última actualización del registro        |
+| Campo | Tipo | Descripción |
+|---|---|---|
+| id | Int | Identificador único de la requisición |
+| requestDate | DateTime | Fecha automática en que se crea la requisición |
+| departmentId | Int | Identificador del área solicitante |
+| department | Department | Relación con el área solicitante |
+| positionId | Int | Identificador del cargo requerido |
+| position | PositionProfile | Relación con el cargo requerido |
+| reason | RequisitionReason | Motivo de la requisición |
+| otherReason | String? | Descripción adicional cuando el motivo es `OTROS` |
+| cityId | Int | Identificador de la ciudad |
+| city | City | Relación con la ciudad |
+| contractType | ContractType? | Tipo principal de contratación solicitado |
+| directContractType | DirectContractType? | Tipo de contrato directo, puede ser indefinido o fijo |
+| contractDurationMonths | Int? | Duración del contrato en meses cuando aplica |
+| internContractType | InternContractType? | Tipo de practicante, puede ser aprendiz, pasante o rotante |
+| proposedSalary | Decimal | Salario propuesto para el cargo |
+| status | RequisitionStatus | Estado de la requisición |
+| createdById | Int | Identificador del usuario que creó la requisición |
+| createdBy | User | Relación con el usuario creador |
+| createdAt | DateTime | Fecha de creación del registro |
+| updatedAt | DateTime | Fecha de última actualización del registro |
 
 ---
 

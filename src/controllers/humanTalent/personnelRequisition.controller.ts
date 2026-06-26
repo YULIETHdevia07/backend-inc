@@ -1,7 +1,15 @@
 import type { Response } from "express";
-import { RequisitionReason } from "@prisma/client";
+import {
+    ContractType,
+    DirectContractType,
+    InternContractType,
+    RequisitionReason,
+} from "@prisma/client";
 import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
-import { createPersonnelRequisitionService, getPersonnelRequisitionsService } from "../../services/humanTalent/personnelRequisition.service.js";
+import {
+    createPersonnelRequisitionService,
+    getPersonnelRequisitionsService,
+} from "../../services/humanTalent/personnelRequisition.service.js";
 
 // Crea una nueva requisición de personal.
 export const createPersonnelRequisition = async (
@@ -15,6 +23,10 @@ export const createPersonnelRequisition = async (
             reason,
             otherReason,
             cityId,
+            contractType,
+            directContractType,
+            contractDurationMonths,
+            internContractType,
             proposedSalary,
         } = req.body;
 
@@ -24,6 +36,23 @@ export const createPersonnelRequisition = async (
             "INCREMENTO_PRODUCCION",
             "SOLICITUD_PRACTICANTES",
             "OTROS",
+        ];
+
+        const allowedContractTypes: ContractType[] = [
+            "DIRECTO",
+            "TEMPORAL",
+            "PRACTICANTE",
+        ];
+
+        const allowedDirectContractTypes: DirectContractType[] = [
+            "INDEFINIDO",
+            "FIJO",
+        ];
+
+        const allowedInternContractTypes: InternContractType[] = [
+            "APRENDIZ",
+            "PASANTE",
+            "ROTANTE",
         ];
 
         if (!req.user) {
@@ -37,6 +66,7 @@ export const createPersonnelRequisition = async (
             !positionId ||
             !reason ||
             !cityId ||
+            !contractType ||
             !proposedSalary
         ) {
             return res.status(400).json({
@@ -54,6 +84,33 @@ export const createPersonnelRequisition = async (
         if (reason === "OTROS" && !otherReason?.trim()) {
             return res.status(400).json({
                 message: "Debe especificar el motivo de la requisición",
+            });
+        }
+
+        if (!allowedContractTypes.includes(contractType)) {
+            return res.status(400).json({
+                message: "Tipo de contratación no válido",
+                allowedContractTypes,
+            });
+        }
+
+        if (
+            contractType === "DIRECTO" &&
+            !allowedDirectContractTypes.includes(directContractType)
+        ) {
+            return res.status(400).json({
+                message: "Tipo de contrato directo no válido",
+                allowedDirectContractTypes,
+            });
+        }
+
+        if (
+            contractType === "PRACTICANTE" &&
+            !allowedInternContractTypes.includes(internContractType)
+        ) {
+            return res.status(400).json({
+                message: "Tipo de practicante no válido",
+                allowedInternContractTypes,
             });
         }
 
@@ -84,12 +141,39 @@ export const createPersonnelRequisition = async (
             });
         }
 
+        if (
+            contractType === "DIRECTO" &&
+            directContractType === "FIJO" &&
+            (Number.isNaN(Number(contractDurationMonths)) ||
+                Number(contractDurationMonths) <= 0)
+        ) {
+            return res.status(400).json({
+                message: "Debe indicar la duración del contrato fijo en meses",
+            });
+        }
+
+        if (
+            contractType === "TEMPORAL" &&
+            (Number.isNaN(Number(contractDurationMonths)) ||
+                Number(contractDurationMonths) <= 0)
+        ) {
+            return res.status(400).json({
+                message: "Debe indicar la duración del contrato temporal en meses",
+            });
+        }
+
         const requisition = await createPersonnelRequisitionService({
             departmentId: Number(departmentId),
             positionId: Number(positionId),
             reason,
             otherReason,
             cityId: Number(cityId),
+            contractType,
+            directContractType: directContractType || null,
+            contractDurationMonths: contractDurationMonths
+                ? Number(contractDurationMonths)
+                : null,
+            internContractType: internContractType || null,
             proposedSalary: Number(proposedSalary),
             createdById: req.user.id,
         });

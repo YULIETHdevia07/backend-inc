@@ -8,6 +8,10 @@ export const createPersonnelRequisitionService = async ({
     reason,
     otherReason,
     cityId,
+    contractType,
+    directContractType,
+    contractDurationMonths,
+    internContractType,
     proposedSalary,
     createdById,
 }: CreatePersonnelRequisitionData) => {
@@ -58,11 +62,50 @@ export const createPersonnelRequisitionService = async ({
         throw new Error("Debe especificar el motivo de la requisición");
     }
 
+    if (!contractType) {
+        throw new Error("El tipo de contratación es obligatorio");
+    }
+
+    if (contractType === "DIRECTO" && !directContractType) {
+        throw new Error("Debe seleccionar el tipo de contrato directo");
+    }
+
+    if (
+        contractType === "DIRECTO" &&
+        directContractType === "FIJO" &&
+        (!contractDurationMonths || contractDurationMonths <= 0)
+    ) {
+        throw new Error("Debe indicar la duración del contrato fijo en meses");
+    }
+
+    if (
+        contractType === "TEMPORAL" &&
+        (!contractDurationMonths || contractDurationMonths <= 0)
+    ) {
+        throw new Error("Debe indicar la duración del contrato temporal en meses");
+    }
+
+    if (contractType === "PRACTICANTE" && !internContractType) {
+        throw new Error("Debe seleccionar el tipo de practicante");
+    }
+
     let cleanOtherReason: string | null = null;
 
     if (reason === "OTROS") {
         cleanOtherReason = otherReason ? otherReason.trim() : null;
     }
+
+    const cleanDirectContractType =
+        contractType === "DIRECTO" ? directContractType : null;
+
+    const cleanContractDurationMonths =
+        contractType === "TEMPORAL" ||
+            (contractType === "DIRECTO" && directContractType === "FIJO")
+            ? contractDurationMonths
+            : null;
+
+    const cleanInternContractType =
+        contractType === "PRACTICANTE" ? internContractType : null;
 
     const requisition = await prisma.personnelRequisition.create({
         data: {
@@ -71,6 +114,10 @@ export const createPersonnelRequisitionService = async ({
             reason,
             otherReason: cleanOtherReason,
             cityId,
+            contractType,
+            directContractType: cleanDirectContractType,
+            contractDurationMonths: cleanContractDurationMonths,
+            internContractType: cleanInternContractType,
             proposedSalary,
             createdById,
         },
