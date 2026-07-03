@@ -110,23 +110,67 @@ Genera automáticamente el cliente de Prisma necesario para conectarse a la base
 
 # 5. Ejecutar migraciones
 
-## Comando
+## Opción 1: Crear la base de datos con migraciones (Recomendado)
+
+### Comando
 
 ```bash
 npx prisma migrate dev
 ```
 
-## Descripción
+### Descripción
 
-Sincroniza la base de datos con el archivo:
+Aplica todas las migraciones almacenadas en `prisma/migrations`, crea o actualiza la base de datos y mantiene un historial de los cambios realizados. Esta es la opción recomendada para trabajar en equipo.
+
+---
+
+## Opción 2: Crear la base de datos directamente desde el esquema
+
+### Comando
+
+```bash
+npx prisma db push
+```
+
+### Descripción
+
+Sincroniza la base de datos directamente con el archivo:
 
 ```txt
 prisma/schema.prisma
 ```
 
+Crea o actualiza las tablas sin utilizar las migraciones. Es útil para crear la base de datos rápidamente durante el desarrollo o para pruebas, pero **no genera un historial de migraciones**, por lo que no se recomienda para proyectos colaborativos.
+
 ---
 
-# 6. Iniciar el servidor
+# 6. Ejecutar seed de Prisma
+
+## Comando
+
+```bash
+npx prisma db seed
+```
+
+## Descripción
+
+Este comando ejecuta el archivo de seed configurado en Prisma.
+
+El seed se usa para insertar datos iniciales necesarios para que el sistema funcione correctamente.
+
+En este proyecto carga información base como:
+
+- Ciudades
+- Departamentos o áreas
+- Perfiles de cargo
+- Pasos de aprobación de requisiciones
+- Pasos de VoBo de contratación
+
+Este comando debe ejecutarse después de las migraciones, porque primero deben existir las tablas en la base de datos.
+
+---
+
+# 7. Iniciar el servidor
 
 ## Comando
 

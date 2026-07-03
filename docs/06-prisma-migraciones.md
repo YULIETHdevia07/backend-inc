@@ -24,19 +24,6 @@ El archivo `schema.prisma` es el archivo principal donde se define la estructura
 
 En este archivo se crean los modelos, campos, relaciones y enumeraciones que Prisma convertirá posteriormente en tablas dentro de MySQL.
 
-Ejemplo:
-
-```prisma
-model User {
-  id       Int    @id @default(autoincrement())
-  name     String
-  email    String @unique
-  password String
-}
-```
-
-Este modelo representa una tabla llamada `User` dentro de la base de datos.
-
 ---
 
 # 2. ¿Qué es un modelo en Prisma?
@@ -231,76 +218,224 @@ prisma.user.delete()
 
 ---
 
-# 12. Comando para actualizar Prisma Client
+# 12. Flujo recomendado después de modificar `schema.prisma`
 
-Después de modificar el archivo `schema.prisma`, también se debe actualizar Prisma Client.
+## Descripción
 
-Para eso se ejecuta:
+Cada vez que se modifica el archivo `schema.prisma`, es recomendable seguir un orden para evitar errores antes de aplicar cambios en la base de datos.
+
+El flujo recomendado es:
+
+```bash
+npx prisma validate
+npx prisma format
+npx prisma migrate dev --name nombre_de_la_migracion
+npx prisma generate
+```
+
+Cada comando cumple una función diferente dentro del proceso de trabajo con Prisma.
+
+---
+
+# 13. Comando `npx prisma validate`
+
+## Descripción
+
+El comando `npx prisma validate` sirve para revisar si el archivo `schema.prisma` está bien escrito.
+
+Este comando valida la estructura del esquema antes de crear una migración o generar el cliente de Prisma.
+
+```bash
+npx prisma validate
+```
+
+## ¿Para qué sirve?
+
+Sirve para confirmar que:
+
+1. Los modelos están bien definidos.
+2. Los campos tienen tipos válidos.
+3. Las relaciones entre tablas están correctamente escritas.
+4. Los enums no tienen errores.
+5. Prisma puede entender correctamente el archivo `schema.prisma`.
+
+## Ejemplo de uso
+
+```bash
+npx prisma validate
+```
+
+Si todo está correcto, Prisma muestra un mensaje indicando que el esquema es válido.
+
+Ejemplo:
+
+```txt
+The schema at prisma/schema.prisma is valid
+```
+
+## Importancia en el proyecto
+
+Este comando se ejecuta antes de migrar para evitar aplicar cambios dañados o mal escritos en la base de datos.
+
+---
+
+# 14. Comando `npx prisma format`
+
+## Descripción
+
+El comando `npx prisma format` sirve para ordenar y formatear automáticamente el archivo `schema.prisma`.
+
+```bash
+npx prisma format
+```
+
+## ¿Para qué sirve?
+
+Sirve para:
+
+1. Organizar los espacios y saltos de línea.
+2. Alinear los campos de los modelos.
+3. Mejorar la lectura del archivo.
+4. Mantener una estructura limpia y ordenada.
+5. Evitar desorden visual cuando se agregan nuevos modelos o relaciones.
+
+## Ejemplo de uso
+
+```bash
+npx prisma format
+```
+
+## Importancia en el proyecto
+
+Este comando no crea tablas ni modifica la base de datos.
+
+Solo organiza el archivo `schema.prisma` para que el código quede limpio y fácil de revisar.
+
+---
+
+# 15. Comando `npx prisma migrate dev --name nombre_de_la_migracion`
+
+## Descripción
+
+El comando `npx prisma migrate dev` sirve para crear y aplicar una migración en ambiente de desarrollo.
+
+```bash
+npx prisma migrate dev --name nombre_de_la_migracion
+```
+
+El nombre de la migración debe describir el cambio realizado.
+
+Ejemplo:
+
+```bash
+npx prisma migrate dev --name add_requisition_approval_and_hiring_confirmation
+```
+
+## ¿Para qué sirve?
+
+Sirve para convertir los cambios hechos en `schema.prisma` en cambios reales dentro de la base de datos MySQL.
+
+Este comando realiza varias acciones:
+
+1. Lee el archivo `schema.prisma`.
+2. Compara los modelos actuales con la base de datos.
+3. Detecta los cambios nuevos.
+4. Crea una carpeta dentro de `prisma/migrations`.
+5. Genera el archivo `migration.sql`.
+6. Aplica los cambios en MySQL.
+7. Registra la migración en el historial de Prisma.
+
+## Importancia en el proyecto
+
+Este comando sí modifica la base de datos.
+
+Por eso se recomienda ejecutar primero:
+
+```bash
+npx prisma validate
+```
+
+y luego:
+
+```bash
+npx prisma format
+```
+
+antes de crear la migración.
+
+---
+
+# 16. Comando `npx prisma generate`
+
+## Descripción
+
+El comando `npx prisma generate` sirve para actualizar Prisma Client después de hacer cambios en `schema.prisma`.
 
 ```bash
 npx prisma generate
 ```
 
-El comando actualiza los tipos de Prisma que utiliza TypeScript.
+## ¿Para qué sirve?
 
-Esto permite que el código reconozca los nuevos campos agregados al modelo.
+Sirve para que el backend reconozca los nuevos modelos, campos, relaciones y enums desde el código TypeScript o JavaScript.
 
-Por ejemplo, antes TypeScript reconocía el usuario así:
-
-```ts
-{
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-}
-```
-
-Después de agregar el campo `role` y ejecutar `npx prisma generate`, TypeScript reconoce el usuario así:
-
-```ts
-{
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
-}
-```
-
----
-
-# 13. Diferencia entre migrate dev y generate
-
-| Comando | Función principal | Qué actualiza |
-|---|---|---|
-| `npx prisma migrate dev --name nombre_migracion` | Aplica cambios en la base de datos | MySQL |
-| `npx prisma generate` | Actualiza Prisma Client | TypeScript / Prisma Client |
-
----
-
-## Ejemplo práctico de la diferencia
-
-Cuando se agregó el campo:
+Por ejemplo, si se agrega un nuevo modelo llamado:
 
 ```prisma
-role Role @default(USER)
+model PersonnelRequisition {
+  id Int @id @default(autoincrement())
+}
 ```
 
-Prisma necesitaba dos procesos:
-
-## Primero: actualizar la base de datos
-
-```bash
-npx prisma migrate dev --name add_role_to_user
-```
-
-Esto permitió que MySQL tuviera realmente la columna `role`.
-
-## Segundo: actualizar Prisma Client
+Después de ejecutar:
 
 ```bash
 npx prisma generate
 ```
 
-Esto permitió que TypeScript reconociera `user.role` dentro del código.
+el backend ya podrá usar:
+
+```ts
+prisma.personnelRequisition.findMany()
+prisma.personnelRequisition.create()
+prisma.personnelRequisition.update()
+prisma.personnelRequisition.delete()
+```
+
+## Importancia en el proyecto
+
+Este comando no crea tablas en MySQL.
+
+Su función es actualizar Prisma Client para que el código del backend pueda trabajar con los cambios nuevos.
+
+---
+
+# 17. Orden correcto de comandos al trabajar con Prisma
+
+## Descripción
+
+Cuando se modifica el archivo `schema.prisma`, el orden recomendado es el siguiente:
+
+```bash
+npx prisma validate
+```
+
+Primero se valida que el esquema no tenga errores.
+
+```bash
+npx prisma format
+```
+
+Luego se organiza el archivo para que quede limpio.
+
+```bash
+npx prisma migrate dev --name nombre_de_la_migracion
+```
+
+Después se crea y aplica la migración en la base de datos.
+
+```bash
+npx prisma generate
+```
+
+Finalmente se actualiza Prisma Client para que el backend reconozca los nuevos cambios.

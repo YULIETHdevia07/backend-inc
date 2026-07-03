@@ -11,6 +11,11 @@ enum Role {
   USER
   ADMIN
   AGENT
+  JEFE_AREA
+  JEFE_DEPARTAMENTO
+  GERENTE_GENERAL
+  ANALISTA_TALENTO_HUMANO
+  JEFE_TALENTO_HUMANO
 }
 
 enum PqrStatus {
@@ -48,6 +53,12 @@ enum NotificationType {
   PQR_TAKEN
   PQR_ASSIGNED
   PQR_UNASSIGNED
+  REQUISITION_PENDING_APPROVAL
+  REQUISITION_APPROVED
+  REQUISITION_REJECTED
+  HIRING_CONFIRMATION_PENDING
+  HIRING_CONFIRMATION_APPROVED
+  HIRING_CONFIRMATION_REJECTED
 }
 
 enum PqrAttachmentType {
@@ -61,13 +72,6 @@ enum RequisitionReason {
   INCREMENTO_PRODUCCION
   SOLICITUD_PRACTICANTES
   OTROS
-}
-
-enum RequisitionStatus {
-  PENDIENTE
-  APROBADA
-  RECHAZADA
-  CANCELADA
 }
 
 enum ContractType {
@@ -87,6 +91,12 @@ enum InternContractType {
   ROTANTE
 }
 
+enum ApprovalDecision {
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -102,6 +112,12 @@ model User {
   pqrChatReads  PqrChatRead[]
 
   personnelRequisitions PersonnelRequisition[]
+
+  personnelRequisitionApprovals PersonnelRequisitionApproval[]
+
+  hiringConfirmations PersonnelHiringConfirmation[]
+
+  hiringConfirmationApprovals PersonnelHiringConfirmationApproval[]
 }
 
 model PQR {
@@ -170,17 +186,19 @@ model PqrMessageAttachment {
 }
 
 model Notification {
-  id        Int              @id @default(autoincrement())
-  title     String
-  message   String
-  type      NotificationType
-  isRead    Boolean          @default(false)
-  userId    Int
-  pqrId     Int?
-  createdAt DateTime         @default(now())
+  id                     Int              @id @default(autoincrement())
+  title                  String
+  message                String
+  type                   NotificationType
+  isRead                 Boolean          @default(false)
+  userId                 Int
+  pqrId                  Int?
+  personnelRequisitionId Int?
+  createdAt              DateTime         @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  pqr  PQR? @relation(fields: [pqrId], references: [id])
+  user                 User                  @relation(fields: [userId], references: [id])
+  pqr                  PQR?                  @relation(fields: [pqrId], references: [id])
+  personnelRequisition PersonnelRequisition? @relation(fields: [personnelRequisitionId], references: [id])
 }
 
 model Department {
@@ -244,11 +262,123 @@ model PersonnelRequisition {
 
   proposedSalary Decimal @db.Decimal(12, 2)
 
-  status RequisitionStatus @default(PENDIENTE)
+  createdById Int
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  approvals          PersonnelRequisitionApproval[]
+  hiringConfirmation PersonnelHiringConfirmation?
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  notifications Notification[]
+}
+
+model RequisitionApprovalStep {
+  id Int @id @default(autoincrement())
+
+  name String @db.VarChar(100)
+
+  stepOrder Int
+
+  requiredRole Role
+
+  isActive Boolean @default(true)
+
+  approvals PersonnelRequisitionApproval[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stepOrder])
+}
+
+model PersonnelRequisitionApproval {
+  id Int @id @default(autoincrement())
+
+  requisitionId Int
+  requisition   PersonnelRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  stepId Int
+  step   RequisitionApprovalStep @relation(fields: [stepId], references: [id])
+
+  decision ApprovalDecision
+
+  decidedById Int
+  decidedBy   User @relation(fields: [decidedById], references: [id])
+
+  decidedAt DateTime @default(now())
+
+  comment String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([requisitionId, stepId])
+}
+
+model PersonnelHiringConfirmation {
+  id Int @id @default(autoincrement())
+
+  requisitionId Int                  @unique
+  requisition   PersonnelRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  contractType ContractType
+
+  directContractType     DirectContractType?
+  contractDurationMonths Int?
+
+  internContractType InternContractType?
+
+  approvedSalary Decimal @db.Decimal(12, 2)
 
   createdById Int
   createdBy   User @relation(fields: [createdById], references: [id])
 
+  approvals PersonnelHiringConfirmationApproval[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model HiringConfirmationApprovalStep {
+  id Int @id @default(autoincrement())
+
+  name String @db.VarChar(100)
+
+  stepOrder Int
+
+  requiredRole Role
+
+  isActive Boolean @default(true)
+
+  approvals PersonnelHiringConfirmationApproval[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([stepOrder])
+}
+
+model PersonnelHiringConfirmationApproval {
+  id Int @id @default(autoincrement())
+
+  hiringConfirmationId Int
+  hiringConfirmation   PersonnelHiringConfirmation @relation(fields: [hiringConfirmationId], references: [id], onDelete: Cascade)
+
+  stepId Int
+  step   HiringConfirmationApprovalStep @relation(fields: [stepId], references: [id])
+
+  decision ApprovalDecision
+
+  decidedById Int
+  decidedBy   User @relation(fields: [decidedById], references: [id])
+
+  decidedAt DateTime @default(now())
+
+  comment String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([hiringConfirmationId, stepId])
 }

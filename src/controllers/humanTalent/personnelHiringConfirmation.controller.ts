@@ -4,41 +4,30 @@ import {
     ContractType,
     DirectContractType,
     InternContractType,
-    RequisitionReason,
 } from "@prisma/client";
-import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
-import {
-    createPersonnelRequisitionService,
-    decidePersonnelRequisitionService,
-    getPersonnelRequisitionsService,
-} from "../../services/humanTalent/personnelRequisition.service.js";
 
-// Crea una nueva requisición de personal.
-export const createPersonnelRequisition = async (
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
+
+import {
+    createPersonnelHiringConfirmationService,
+    decidePersonnelHiringConfirmationService,
+} from "../../services/humanTalent/personnelHiringConfirmation.service.js";
+
+// Crea la confirmación final de contratación de una requisición.
+export const createPersonnelHiringConfirmation = async (
     req: AuthRequest,
     res: Response
 ) => {
     try {
+        const { id } = req.params;
+
         const {
-            departmentId,
-            positionId,
-            reason,
-            otherReason,
-            cityId,
             contractType,
             directContractType,
             contractDurationMonths,
             internContractType,
-            proposedSalary,
+            approvedSalary,
         } = req.body;
-
-        const allowedReasons: RequisitionReason[] = [
-            "CARGO_NUEVO",
-            "REEMPLAZO_RETIRO",
-            "INCREMENTO_PRODUCCION",
-            "SOLICITUD_PRACTICANTES",
-            "OTROS",
-        ];
 
         const allowedContractTypes: ContractType[] = [
             "DIRECTO",
@@ -63,29 +52,15 @@ export const createPersonnelRequisition = async (
             });
         }
 
-        if (
-            !departmentId ||
-            !positionId ||
-            !reason ||
-            !cityId ||
-            !contractType ||
-            !proposedSalary
-        ) {
+        if (Number.isNaN(Number(id))) {
+            return res.status(400).json({
+                message: "La requisición no es válida",
+            });
+        }
+
+        if (!contractType || !approvedSalary) {
             return res.status(400).json({
                 message: "Todos los campos obligatorios deben ser enviados",
-            });
-        }
-
-        if (!allowedReasons.includes(reason)) {
-            return res.status(400).json({
-                message: "Motivo de requisición no válido",
-                allowedReasons,
-            });
-        }
-
-        if (reason === "OTROS" && !otherReason?.trim()) {
-            return res.status(400).json({
-                message: "Debe especificar el motivo de la requisición",
             });
         }
 
@@ -116,30 +91,12 @@ export const createPersonnelRequisition = async (
             });
         }
 
-        if (Number.isNaN(Number(departmentId))) {
-            return res.status(400).json({
-                message: "El área solicitante no es válida",
-            });
-        }
-
-        if (Number.isNaN(Number(positionId))) {
-            return res.status(400).json({
-                message: "El cargo requerido no es válido",
-            });
-        }
-
-        if (Number.isNaN(Number(cityId))) {
-            return res.status(400).json({
-                message: "La ciudad no es válida",
-            });
-        }
-
         if (
-            Number.isNaN(Number(proposedSalary)) ||
-            Number(proposedSalary) <= 0
+            Number.isNaN(Number(approvedSalary)) ||
+            Number(approvedSalary) <= 0
         ) {
             return res.status(400).json({
-                message: "El salario propuesto debe ser mayor a cero",
+                message: "El salario aprobado debe ser mayor a cero",
             });
         }
 
@@ -164,66 +121,35 @@ export const createPersonnelRequisition = async (
             });
         }
 
-        const requisition = await createPersonnelRequisitionService({
-            departmentId: Number(departmentId),
-            positionId: Number(positionId),
-            reason,
-            otherReason,
-            cityId: Number(cityId),
-            contractType,
-            directContractType: directContractType || null,
-            contractDurationMonths: contractDurationMonths
-                ? Number(contractDurationMonths)
-                : null,
-            internContractType: internContractType || null,
-            proposedSalary: Number(proposedSalary),
-            createdById: req.user.id,
-        });
+        const hiringConfirmation =
+            await createPersonnelHiringConfirmationService({
+                requisitionId: Number(id),
+                contractType,
+                directContractType: directContractType || null,
+                contractDurationMonths: contractDurationMonths
+                    ? Number(contractDurationMonths)
+                    : null,
+                internContractType: internContractType || null,
+                approvedSalary: Number(approvedSalary),
+                createdById: req.user.id,
+            });
 
         return res.status(201).json({
-            message: "Requisición de personal creada correctamente",
-            requisition,
+            message: "Confirmación de contratación registrada correctamente",
+            hiringConfirmation,
         });
     } catch (error) {
         return res.status(400).json({
             message:
                 error instanceof Error
                     ? error.message
-                    : "Error al crear la requisición de personal",
+                    : "Error al registrar la confirmación de contratación",
         });
     }
 };
 
-// Obtiene el listado de requisiciones de personal.
-export const getPersonnelRequisitions = async (
-    req: AuthRequest,
-    res: Response
-) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({
-                message: "Usuario no autenticado",
-            });
-        }
-
-        const requisitions = await getPersonnelRequisitionsService();
-
-        return res.json({
-            message: "Requisiciones de personal obtenidas correctamente",
-            requisitions,
-        });
-    } catch (error) {
-        return res.status(400).json({
-            message:
-                error instanceof Error
-                    ? error.message
-                    : "Error al obtener las requisiciones de personal",
-        });
-    }
-};
-
-// Aprueba, rechaza o cancela una requisición de personal.
-export const decidePersonnelRequisition = async (
+// Aprueba, rechaza o cancela una confirmación de contratación.
+export const decidePersonnelHiringConfirmation = async (
     req: AuthRequest,
     res: Response
 ) => {
@@ -245,7 +171,7 @@ export const decidePersonnelRequisition = async (
 
         if (Number.isNaN(Number(id))) {
             return res.status(400).json({
-                message: "La requisición no es válida",
+                message: "La confirmación de contratación no es válida",
             });
         }
 
@@ -271,15 +197,15 @@ export const decidePersonnelRequisition = async (
             });
         }
 
-        const approval = await decidePersonnelRequisitionService({
-            requisitionId: Number(id),
+        const approval = await decidePersonnelHiringConfirmationService({
+            hiringConfirmationId: Number(id),
             decision,
             comment,
             decidedById: req.user.id,
         });
 
         return res.json({
-            message: "Decisión registrada correctamente",
+            message: "Decisión de Talento Humano registrada correctamente",
             approval,
         });
     } catch (error) {
@@ -287,7 +213,7 @@ export const decidePersonnelRequisition = async (
             message:
                 error instanceof Error
                     ? error.message
-                    : "Error al registrar la decisión de la requisición",
+                    : "Error al registrar la decisión de Talento Humano",
         });
     }
 };

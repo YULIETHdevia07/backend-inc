@@ -2,7 +2,6 @@ import type { Response, NextFunction } from "express";
 import type { AuthRequest } from "../interfaces/auth/auth.interface.js";
 import type { Role } from "@prisma/client";
 
-
 // Valida que el usuario autenticado tenga alguno de los roles permitidos
 export const roleMiddleware = (allowedRoles: Role[]) => {
     return (

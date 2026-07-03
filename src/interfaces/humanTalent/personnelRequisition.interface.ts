@@ -1,4 +1,5 @@
 import type {
+  ApprovalDecision,
   ContractType,
   DirectContractType,
   InternContractType,
@@ -10,7 +11,7 @@ export interface CreatePersonnelRequisitionData {
   departmentId: number;
   positionId: number;
   reason: RequisitionReason;
-  otherReason: string | null;
+  otherReason?: string | null;
   cityId: number;
 
   contractType: ContractType;
@@ -20,4 +21,12 @@ export interface CreatePersonnelRequisitionData {
 
   proposedSalary: number;
   createdById: number;
+}
+
+// Datos necesarios para aprobar, rechazar o cancelar una requisición.
+export interface DecidePersonnelRequisitionData {
+  requisitionId: number;
+  decision: ApprovalDecision;
+  comment?: string | null;
+  decidedById: number;
 }

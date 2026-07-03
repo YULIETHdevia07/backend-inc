@@ -94,10 +94,6 @@ El servidor se reinicia automáticamente al detectar cambios en el proyecto.
 
 ---
 
-
-
----
-
 # 5. Creación de Prisma Client
 
 ## Archivo creado
@@ -166,10 +162,10 @@ Este archivo centraliza todas las rutas del backend.
 
 Actualmente incluye:
 
-| Ruta | Descripción |
-|---|---|
+| Ruta        | Descripción                       |
+| ----------- | --------------------------------- |
 | /api/health | Verificación del estado de la API |
-| /api/users | Rutas relacionadas con usuarios |
+| /api/users  | Rutas relacionadas con usuarios   |
 
 ---
 
@@ -353,5 +349,57 @@ El controlador actualmente realiza el siguiente proceso:
 4. Retornar únicamente información segura.
 5. Evitar exponer la contraseña.
 6. Manejar errores y accesos no autorizados.
+
+---
+
+# 12. Configuración de Seed en Prisma
+
+## Descripción
+
+Se configuró el archivo de seed de Prisma para insertar datos iniciales necesarios para el funcionamiento del sistema.
+
+El seed permite cargar información base en la base de datos después de crear las tablas con las migraciones.
+
+---
+
+## Archivo creado
+
+```txt
+prisma/seed.js
+```
+
+## ¿Para qué sirve el archivo `seed.js`?
+
+El archivo `seed.js` sirve para insertar datos iniciales en la base de datos.
+
+La migración crea las tablas, pero no llena información dentro de ellas.
+
+---
+
+# 13. Configuración del seed en `package.json`
+
+## Archivo modificado
+
+```txt
+package.json
+```
+
+## Configuración agregada
+
+```json
+"prisma": {
+  "seed": "node prisma/seed.js"
+}
+```
+
+---
+
+## Descripción
+
+Esta configuración le indica a Prisma qué archivo debe ejecutar cuando se use el comando:
+
+```bash
+npx prisma db seed
+```
 
 ---
