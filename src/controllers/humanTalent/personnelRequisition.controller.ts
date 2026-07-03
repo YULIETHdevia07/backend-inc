@@ -194,7 +194,7 @@ export const createPersonnelRequisition = async (
     }
 };
 
-// Obtiene el listado de requisiciones de personal.
+// Obtiene el listado de requisiciones de personal según el rol del usuario autenticado.
 export const getPersonnelRequisitions = async (
     req: AuthRequest,
     res: Response
@@ -206,7 +206,7 @@ export const getPersonnelRequisitions = async (
             });
         }
 
-        const requisitions = await getPersonnelRequisitionsService();
+        const requisitions = await getPersonnelRequisitionsService(req.user);
 
         return res.json({
             message: "Requisiciones de personal obtenidas correctamente",

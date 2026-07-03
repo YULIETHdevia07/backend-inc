@@ -415,9 +415,9 @@ export const decidePersonnelHiringConfirmationService = async ({
                     personnelRequisitionId:
                         hiringConfirmation.requisition.id,
                     type: "HIRING_CONFIRMATION_APPROVED",
-                    title: "Requisición aprobada",
+                    title: "Proceso de requisición finalizado",
                     message:
-                        "La requisición de personal completó todo el proceso de aprobación.",
+                        "La requisición de personal fue aprobada completamente por Talento Humano.",
                 },
             });
         }

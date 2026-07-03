@@ -1,6 +1,12 @@
 import prisma from "../../config/client.js";
-import type { CreatePersonnelRequisitionData, DecidePersonnelRequisitionData } from "../../interfaces/humanTalent/personnelRequisition.interface.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
+import type {
+    CreatePersonnelRequisitionData,
+    DecidePersonnelRequisitionData,
+} from "../../interfaces/humanTalent/personnelRequisition.interface.js";
 import { calculatePersonnelRequisitionStatus } from "../../utils/humanTalent/requisitionStatus.helper.js";
+
+type AuthenticatedUser = NonNullable<AuthRequest["user"]>;
 
 // Crea una requisición de personal.
 export const createPersonnelRequisitionService = async ({
@@ -237,16 +243,19 @@ export const createPersonnelRequisitionService = async ({
     return requisition;
 };
 
-// Obtiene el listado de requisiciones de personal con estado calculado.
-export const getPersonnelRequisitionsService = async () => {
-    const requisitionApprovalSteps = await prisma.requisitionApprovalStep.findMany({
-        where: {
-            isActive: true,
-        },
-        orderBy: {
-            stepOrder: "asc",
-        },
-    });
+// Obtiene el listado de requisiciones de personal según el rol del usuario autenticado.
+export const getPersonnelRequisitionsService = async (
+    user: AuthenticatedUser
+) => {
+    const requisitionApprovalSteps =
+        await prisma.requisitionApprovalStep.findMany({
+            where: {
+                isActive: true,
+            },
+            orderBy: {
+                stepOrder: "asc",
+            },
+        });
 
     const hiringConfirmationApprovalSteps =
         await prisma.hiringConfirmationApprovalStep.findMany({
@@ -306,6 +315,14 @@ export const getPersonnelRequisitionsService = async () => {
             },
             hiringConfirmation: {
                 include: {
+                    createdBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
                     approvals: {
                         include: {
                             step: true,
@@ -338,7 +355,70 @@ export const getPersonnelRequisitionsService = async () => {
         };
     });
 
-    return requisitionsWithStatus;
+    if (user.role === "ADMIN") {
+        return requisitionsWithStatus;
+    }
+
+    if (user.role === "JEFE_AREA") {
+        return requisitionsWithStatus.filter((requisition) => {
+            return requisition.createdById === user.id;
+        });
+    }
+
+    if (user.role === "JEFE_DEPARTAMENTO") {
+        return requisitionsWithStatus.filter((requisition) => {
+            const alreadyDecidedByUser = requisition.approvals.some(
+                (approval) => approval.decidedById === user.id
+            );
+
+            return (
+                requisition.status === "PENDIENTE_JEFE_DEPARTAMENTO" ||
+                alreadyDecidedByUser
+            );
+        });
+    }
+
+    if (user.role === "GERENTE_GENERAL") {
+        return requisitionsWithStatus.filter((requisition) => {
+            const alreadyDecidedByUser = requisition.approvals.some(
+                (approval) => approval.decidedById === user.id
+            );
+
+            return (
+                requisition.status === "PENDIENTE_GERENCIA_GENERAL" ||
+                alreadyDecidedByUser
+            );
+        });
+    }
+
+    if (user.role === "ANALISTA_TALENTO_HUMANO") {
+        return requisitionsWithStatus.filter((requisition) => {
+            const alreadyConfirmedByUser =
+                requisition.hiringConfirmation?.createdById === user.id;
+
+            return (
+                requisition.status ===
+                    "PENDIENTE_CONFIRMACION_TALENTO_HUMANO" ||
+                alreadyConfirmedByUser
+            );
+        });
+    }
+
+    if (user.role === "JEFE_TALENTO_HUMANO") {
+        return requisitionsWithStatus.filter((requisition) => {
+            const alreadyDecidedByUser =
+                requisition.hiringConfirmation?.approvals.some((approval) => {
+                    return approval.decidedById === user.id;
+                }) || false;
+
+            return (
+                requisition.status === "PENDIENTE_JEFE_TALENTO_HUMANO" ||
+                alreadyDecidedByUser
+            );
+        });
+    }
+
+    return [];
 };
 
 // Registra la decisión de aprobación o rechazo de una requisición.

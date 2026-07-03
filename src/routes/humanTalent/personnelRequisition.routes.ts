@@ -37,7 +37,6 @@ router.patch(
     "/:id/decision",
     authMiddleware,
     roleMiddleware([
-        "JEFE_AREA",
         "JEFE_DEPARTAMENTO",
         "GERENTE_GENERAL",
     ]),
