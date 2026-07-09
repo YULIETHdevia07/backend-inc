@@ -24,6 +24,23 @@ export const getProfile = async (
         name: true,
         email: true,
         role: true,
+        createdAt: true,
+        updatedAt: true,
+        positionAssignments: {
+          where: {
+            isActive: true,
+            endDate: null,
+          },
+          select: {
+            position: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -33,9 +50,21 @@ export const getProfile = async (
       });
     }
 
+    const positions = user.positionAssignments.map((assignment) => {
+      return assignment.position;
+    });
+
     return res.status(200).json({
       message: "Perfil obtenido correctamente.",
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        positions,
+      },
     });
   } catch (error) {
     console.log(error);

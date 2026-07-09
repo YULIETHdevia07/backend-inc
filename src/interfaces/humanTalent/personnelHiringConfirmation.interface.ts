@@ -23,3 +23,18 @@ export interface DecidePersonnelHiringConfirmationData {
     comment?: string | null;
     decidedById: number;
 }
+
+// Datos básicos de una asignación activa de usuario a cargo para Talento Humano.
+export interface HumanTalentActiveAssignment {
+    id: number;
+    userId: number;
+}
+
+// Paso calculado para el flujo de aprobación de la confirmación de contratación.
+export interface HiringConfirmationApprovalFlowStep {
+    approvalOrder: number;
+    approverPositionId: number;
+    approverAssignmentId: number;
+    approverUserId: number;
+    isAutoApproved: boolean;
+}

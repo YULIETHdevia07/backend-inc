@@ -271,12 +271,15 @@ export const decidePersonnelRequisition = async (
             });
         }
 
-        const approval = await decidePersonnelRequisitionService({
-            requisitionId: Number(id),
-            decision,
-            comment,
-            decidedById: req.user.id,
-        });
+        const approval = await decidePersonnelRequisitionService(
+            {
+                requisitionId: Number(id),
+                decision,
+                comment,
+                decidedById: req.user.id,
+            },
+            req.user
+        );
 
         return res.json({
             message: "Decisión registrada correctamente",

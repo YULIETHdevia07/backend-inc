@@ -1,26 +1,19 @@
 import { Router } from "express";
+
 import {
     createPersonnelRequisition,
     decidePersonnelRequisition,
     getPersonnelRequisitions,
 } from "../../controllers/humanTalent/personnelRequisition.controller.js";
+
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
-import { roleMiddleware } from "../../middlewares/role.middleware.js";
 
 const router = Router();
 
-// Obtiene el listado de requisiciones de personal.
+// Obtiene el listado de requisiciones de personal visibles para el usuario autenticado.
 router.get(
     "/",
     authMiddleware,
-    roleMiddleware([
-        "ADMIN",
-        "JEFE_AREA",
-        "JEFE_DEPARTAMENTO",
-        "GERENTE_GENERAL",
-        "ANALISTA_TALENTO_HUMANO",
-        "JEFE_TALENTO_HUMANO",
-    ]),
     getPersonnelRequisitions
 );
 
@@ -28,18 +21,13 @@ router.get(
 router.post(
     "/",
     authMiddleware,
-    roleMiddleware(["JEFE_AREA"]),
     createPersonnelRequisition
 );
 
-// Aprueba, rechaza o cancela una requisición de personal.
+// Aprueba, rechaza o cancela el paso actual de una requisición de personal.
 router.patch(
     "/:id/decision",
     authMiddleware,
-    roleMiddleware([
-        "JEFE_DEPARTAMENTO",
-        "GERENTE_GENERAL",
-    ]),
     decidePersonnelRequisition
 );
 

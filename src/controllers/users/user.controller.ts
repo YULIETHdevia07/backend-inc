@@ -64,8 +64,25 @@ export const loginUser = async (
       where: {
         email,
       },
+      include: {
+        positionAssignments: {
+          where: {
+            isActive: true,
+            endDate: null,
+          },
+          include: {
+            position: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
-
+    
     if (!user) {
       return res.status(400).json({
         message: "Credenciales inválidas",
@@ -95,12 +112,22 @@ export const loginUser = async (
       }
     );
 
-    const { password: _, ...userWithoutPassword } = user;
+    const positions = user.positionAssignments.map((assignment) => {
+      return assignment.position;
+    });
 
     return res.json({
       message: "Login exitoso",
       token,
-      user: userWithoutPassword,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        positions,
+      },
     });
   } catch (error) {
     return res.status(500).json({

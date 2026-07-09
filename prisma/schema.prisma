@@ -11,11 +11,6 @@ enum Role {
   USER
   ADMIN
   AGENT
-  JEFE_AREA
-  JEFE_DEPARTAMENTO
-  GERENTE_GENERAL
-  ANALISTA_TALENTO_HUMANO
-  JEFE_TALENTO_HUMANO
 }
 
 enum PqrStatus {
@@ -53,9 +48,11 @@ enum NotificationType {
   PQR_TAKEN
   PQR_ASSIGNED
   PQR_UNASSIGNED
+
   REQUISITION_PENDING_APPROVAL
   REQUISITION_APPROVED
   REQUISITION_REJECTED
+
   HIRING_CONFIRMATION_PENDING
   HIRING_CONFIRMATION_APPROVED
   HIRING_CONFIRMATION_REJECTED
@@ -97,6 +94,23 @@ enum ApprovalDecision {
   CANCELADA
 }
 
+enum PersonnelRequisitionStatus {
+  PENDIENTE_APROBACION
+  EN_APROBACION
+  PENDIENTE_CONFIRMACION_TALENTO_HUMANO
+  PENDIENTE_APROBACION_TALENTO_HUMANO
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
+enum PersonnelHiringConfirmationStatus {
+  PENDIENTE_APROBACION
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
 model User {
   id       Int    @id @default(autoincrement())
   name     String
@@ -111,13 +125,22 @@ model User {
   notifications Notification[]
   pqrChatReads  PqrChatRead[]
 
-  personnelRequisitions PersonnelRequisition[]
+  positionAssignments UserPositionAssignment[]
 
-  personnelRequisitionApprovals PersonnelRequisitionApproval[]
+  personnelRequisitions PersonnelRequisition[] @relation("CreatedRequisitions")
 
-  hiringConfirmations PersonnelHiringConfirmation[]
+  assignedRequisitionApprovals PersonnelRequisitionApproval[] @relation("AssignedRequisitionApprovals")
 
-  hiringConfirmationApprovals PersonnelHiringConfirmationApproval[]
+  decidedRequisitionApprovals PersonnelRequisitionApproval[] @relation("DecidedRequisitionApprovals")
+
+  hiringConfirmations PersonnelHiringConfirmation[] @relation("CreatedHiringConfirmations")
+
+  assignedHiringConfirmationApprovals PersonnelHiringConfirmationApproval[] @relation("AssignedHiringApprovals")
+
+  decidedHiringConfirmationApprovals PersonnelHiringConfirmationApproval[] @relation("DecidedHiringApprovals")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PQR {
@@ -199,6 +222,10 @@ model Notification {
   user                 User                  @relation(fields: [userId], references: [id])
   pqr                  PQR?                  @relation(fields: [pqrId], references: [id])
   personnelRequisition PersonnelRequisition? @relation(fields: [personnelRequisitionId], references: [id])
+
+  @@index([userId])
+  @@index([pqrId])
+  @@index([personnelRequisitionId])
 }
 
 model Department {
@@ -207,10 +234,24 @@ model Department {
   name     String
   isActive Boolean @default(true)
 
-  requisitions PersonnelRequisition[]
+  parentDepartmentId Int?
+  parentDepartment   Department?  @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  childDepartments   Department[] @relation("DepartmentHierarchy")
+
+  responsiblePositionId Int?
+  responsiblePosition   PositionProfile? @relation("DepartmentResponsiblePosition", fields: [responsiblePositionId], references: [id])
+
+  positions PositionProfile[] @relation("PositionHomeDepartment")
+
+  requisitions PersonnelRequisition[] @relation("RequisitionDepartment")
+
+  requisitionApprovals PersonnelRequisitionApproval[] @relation("ApprovalDepartment")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([parentDepartmentId])
+  @@index([responsiblePositionId])
 }
 
 model PositionProfile {
@@ -219,10 +260,54 @@ model PositionProfile {
   name     String
   isActive Boolean @default(true)
 
-  requisitions PersonnelRequisition[]
+  homeDepartmentId Int?
+  homeDepartment   Department? @relation("PositionHomeDepartment", fields: [homeDepartmentId], references: [id])
+
+  responsibleForDepartments Department[] @relation("DepartmentResponsiblePosition")
+
+  userAssignments UserPositionAssignment[]
+
+  requisitions PersonnelRequisition[] @relation("RequestedPosition")
+
+  requisitionApprovals PersonnelRequisitionApproval[] @relation("RequisitionApproverPosition")
+
+  hiringConfirmationApprovals PersonnelHiringConfirmationApproval[] @relation("HiringApproverPosition")
+
+  humanTalentAnalystConfigs HumanTalentWorkflowConfig[] @relation("HumanTalentAnalystPosition")
+
+  humanTalentChiefConfigs HumanTalentWorkflowConfig[] @relation("HumanTalentChiefPosition")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([homeDepartmentId])
+}
+
+model UserPositionAssignment {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  positionId Int
+  position   PositionProfile @relation(fields: [positionId], references: [id])
+
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+
+  isActive Boolean @default(true)
+
+  requisitionApprovals PersonnelRequisitionApproval[] @relation("RequisitionApproverAssignment")
+
+  hiringConfirmationApprovals PersonnelHiringConfirmationApproval[] @relation("HiringApproverAssignment")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([positionId])
+  @@index([isActive])
+  @@index([positionId, isActive])
 }
 
 model City {
@@ -242,10 +327,10 @@ model PersonnelRequisition {
   requestDate DateTime @default(now())
 
   departmentId Int
-  department   Department @relation(fields: [departmentId], references: [id])
+  department   Department @relation("RequisitionDepartment", fields: [departmentId], references: [id])
 
   positionId Int
-  position   PositionProfile @relation(fields: [positionId], references: [id])
+  position   PositionProfile @relation("RequestedPosition", fields: [positionId], references: [id])
 
   reason      RequisitionReason
   otherReason String?           @db.VarChar(300)
@@ -262,8 +347,10 @@ model PersonnelRequisition {
 
   proposedSalary Decimal @db.Decimal(12, 2)
 
+  status PersonnelRequisitionStatus @default(PENDIENTE_APROBACION)
+
   createdById Int
-  createdBy   User @relation(fields: [createdById], references: [id])
+  createdBy   User @relation("CreatedRequisitions", fields: [createdById], references: [id])
 
   approvals          PersonnelRequisitionApproval[]
   hiringConfirmation PersonnelHiringConfirmation?
@@ -271,25 +358,12 @@ model PersonnelRequisition {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   notifications Notification[]
-}
 
-model RequisitionApprovalStep {
-  id Int @id @default(autoincrement())
-
-  name String @db.VarChar(100)
-
-  stepOrder Int
-
-  requiredRole Role
-
-  isActive Boolean @default(true)
-
-  approvals PersonnelRequisitionApproval[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([stepOrder])
+  @@index([departmentId])
+  @@index([positionId])
+  @@index([cityId])
+  @@index([createdById])
+  @@index([status])
 }
 
 model PersonnelRequisitionApproval {
@@ -298,22 +372,64 @@ model PersonnelRequisitionApproval {
   requisitionId Int
   requisition   PersonnelRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
 
-  stepId Int
-  step   RequisitionApprovalStep @relation(fields: [stepId], references: [id])
+  approvalOrder Int
 
-  decision ApprovalDecision
+  departmentId Int?
+  department   Department? @relation("ApprovalDepartment", fields: [departmentId], references: [id])
 
-  decidedById Int
-  decidedBy   User @relation(fields: [decidedById], references: [id])
+  approverPositionId Int
+  approverPosition   PositionProfile @relation("RequisitionApproverPosition", fields: [approverPositionId], references: [id])
 
-  decidedAt DateTime @default(now())
+  approverAssignmentId Int?
+  approverAssignment   UserPositionAssignment? @relation("RequisitionApproverAssignment", fields: [approverAssignmentId], references: [id])
+
+  approverUserId Int?
+  approverUser   User? @relation("AssignedRequisitionApprovals", fields: [approverUserId], references: [id])
+
+  decision ApprovalDecision?
+
+  decidedById Int?
+  decidedBy   User? @relation("DecidedRequisitionApprovals", fields: [decidedById], references: [id])
+
+  assignedAt DateTime  @default(now())
+  decidedAt  DateTime?
 
   comment String? @db.VarChar(500)
+
+  isCurrent Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([requisitionId, stepId])
+  @@unique([requisitionId, approvalOrder])
+  @@index([requisitionId])
+  @@index([departmentId])
+  @@index([approverPositionId])
+  @@index([approverAssignmentId])
+  @@index([approverUserId])
+  @@index([decision])
+  @@index([isCurrent])
+}
+
+model HumanTalentWorkflowConfig {
+  id Int @id @default(autoincrement())
+
+  name String @db.VarChar(100)
+
+  analystPositionId Int
+  analystPosition   PositionProfile @relation("HumanTalentAnalystPosition", fields: [analystPositionId], references: [id])
+
+  chiefPositionId Int
+  chiefPosition   PositionProfile @relation("HumanTalentChiefPosition", fields: [chiefPositionId], references: [id])
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([analystPositionId])
+  @@index([chiefPositionId])
+  @@index([isActive])
 }
 
 model PersonnelHiringConfirmation {
@@ -331,32 +447,18 @@ model PersonnelHiringConfirmation {
 
   approvedSalary Decimal @db.Decimal(12, 2)
 
+  status PersonnelHiringConfirmationStatus @default(PENDIENTE_APROBACION)
+
   createdById Int
-  createdBy   User @relation(fields: [createdById], references: [id])
-
-  approvals PersonnelHiringConfirmationApproval[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model HiringConfirmationApprovalStep {
-  id Int @id @default(autoincrement())
-
-  name String @db.VarChar(100)
-
-  stepOrder Int
-
-  requiredRole Role
-
-  isActive Boolean @default(true)
+  createdBy   User @relation("CreatedHiringConfirmations", fields: [createdById], references: [id])
 
   approvals PersonnelHiringConfirmationApproval[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([stepOrder])
+  @@index([createdById])
+  @@index([status])
 }
 
 model PersonnelHiringConfirmationApproval {
@@ -365,20 +467,37 @@ model PersonnelHiringConfirmationApproval {
   hiringConfirmationId Int
   hiringConfirmation   PersonnelHiringConfirmation @relation(fields: [hiringConfirmationId], references: [id], onDelete: Cascade)
 
-  stepId Int
-  step   HiringConfirmationApprovalStep @relation(fields: [stepId], references: [id])
+  approvalOrder Int
 
-  decision ApprovalDecision
+  approverPositionId Int
+  approverPosition   PositionProfile @relation("HiringApproverPosition", fields: [approverPositionId], references: [id])
 
-  decidedById Int
-  decidedBy   User @relation(fields: [decidedById], references: [id])
+  approverAssignmentId Int?
+  approverAssignment   UserPositionAssignment? @relation("HiringApproverAssignment", fields: [approverAssignmentId], references: [id])
 
-  decidedAt DateTime @default(now())
+  approverUserId Int?
+  approverUser   User? @relation("AssignedHiringApprovals", fields: [approverUserId], references: [id])
+
+  decision ApprovalDecision?
+
+  decidedById Int?
+  decidedBy   User? @relation("DecidedHiringApprovals", fields: [decidedById], references: [id])
+
+  assignedAt DateTime  @default(now())
+  decidedAt  DateTime?
 
   comment String? @db.VarChar(500)
+
+  isCurrent Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([hiringConfirmationId, stepId])
+  @@unique([hiringConfirmationId, approvalOrder])
+  @@index([hiringConfirmationId])
+  @@index([approverPositionId])
+  @@index([approverAssignmentId])
+  @@index([approverUserId])
+  @@index([decision])
+  @@index([isCurrent])
 }

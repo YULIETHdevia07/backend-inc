@@ -1,4 +1,10 @@
 import prisma from "../../config/client.js";
+
+import {
+    buildHiringConfirmationApprovalCreateManyData,
+    buildHiringConfirmationApprovalFlow,
+} from "../../utils/humanTalent/hiringConfirmationApprovalFlow.helper.js";
+
 import type {
     CreatePersonnelHiringConfirmationData,
     DecidePersonnelHiringConfirmationData,
@@ -20,7 +26,6 @@ export const createPersonnelHiringConfirmationService = async ({
                 id: requisitionId,
             },
             include: {
-                approvals: true,
                 hiringConfirmation: true,
             },
         });
@@ -35,37 +40,9 @@ export const createPersonnelHiringConfirmationService = async ({
             );
         }
 
-        const requisitionApprovalSteps =
-            await tx.requisitionApprovalStep.findMany({
-                where: {
-                    isActive: true,
-                },
-            });
-
-        const hasRejectedRequisition = requisition.approvals.some(
-            (approval) =>
-                approval.decision === "RECHAZADA" ||
-                approval.decision === "CANCELADA"
-        );
-
-        if (hasRejectedRequisition) {
+        if (requisition.status !== "PENDIENTE_CONFIRMACION_TALENTO_HUMANO") {
             throw new Error(
-                "No se puede confirmar una requisición rechazada o cancelada"
-            );
-        }
-
-        const allRequisitionStepsApproved = requisitionApprovalSteps.every(
-            (step) =>
-                requisition.approvals.some(
-                    (approval) =>
-                        approval.stepId === step.id &&
-                        approval.decision === "APROBADA"
-                )
-        );
-
-        if (!allRequisitionStepsApproved) {
-            throw new Error(
-                "La requisición todavía no ha sido aprobada por todos los responsables"
+                "La requisición todavía no está lista para confirmación de Talento Humano"
             );
         }
 
@@ -75,18 +52,14 @@ export const createPersonnelHiringConfirmationService = async ({
             },
             select: {
                 id: true,
+                name: true,
+                email: true,
                 role: true,
             },
         });
 
         if (!user) {
             throw new Error("El usuario que confirma la contratación no existe");
-        }
-
-        if (user.role !== "ANALISTA_TALENTO_HUMANO") {
-            throw new Error(
-                "Solo el Analista de Talento Humano puede registrar la confirmación"
-            );
         }
 
         if (contractType === "DIRECTO" && !directContractType) {
@@ -116,6 +89,10 @@ export const createPersonnelHiringConfirmationService = async ({
             throw new Error("Debe seleccionar el tipo de practicante");
         }
 
+        if (!approvedSalary || approvedSalary <= 0) {
+            throw new Error("El salario aprobado debe ser mayor a cero");
+        }
+
         const cleanDirectContractType =
             contractType === "DIRECTO" ? directContractType : null;
 
@@ -128,31 +105,25 @@ export const createPersonnelHiringConfirmationService = async ({
         const cleanInternContractType =
             contractType === "PRACTICANTE" ? internContractType : null;
 
-        const analistaStep =
-            await tx.hiringConfirmationApprovalStep.findFirst({
-                where: {
-                    requiredRole: "ANALISTA_TALENTO_HUMANO",
-                    isActive: true,
-                },
-            });
+        // Construye el flujo de Talento Humano desde la configuración activa.
+        const approvalSteps = await buildHiringConfirmationApprovalFlow(
+            tx,
+            createdById
+        );
 
-        if (!analistaStep) {
+        const analystStep = approvalSteps.find(
+            (step) => step.approvalOrder === 1
+        );
+
+        if (!analystStep || analystStep.approverUserId !== createdById) {
             throw new Error(
-                "No existe el paso de aprobación para Analista de Talento Humano"
+                "Solo el usuario asignado al primer VoBo de Talento Humano puede registrar la confirmación"
             );
         }
 
-        const nextStep = await tx.hiringConfirmationApprovalStep.findFirst({
-            where: {
-                stepOrder: {
-                    gt: analistaStep.stepOrder,
-                },
-                isActive: true,
-            },
-            orderBy: {
-                stepOrder: "asc",
-            },
-        });
+        const firstPendingStep = approvalSteps.find(
+            (step) => !step.isAutoApproved
+        );
 
         const hiringConfirmation =
             await tx.personnelHiringConfirmation.create({
@@ -163,103 +134,123 @@ export const createPersonnelHiringConfirmationService = async ({
                     contractDurationMonths: cleanContractDurationMonths,
                     internContractType: cleanInternContractType,
                     approvedSalary,
+                    status: "PENDIENTE_APROBACION",
                     createdById,
                 },
             });
 
-        await tx.personnelHiringConfirmationApproval.create({
+        // Crea los pasos de aprobación de la confirmación de contratación.
+        await tx.personnelHiringConfirmationApproval.createMany({
+            data: buildHiringConfirmationApprovalCreateManyData(
+                hiringConfirmation.id,
+                approvalSteps,
+                createdById
+            ),
+        });
+
+        // La requisición pasa a espera de aprobación final de Talento Humano.
+        await tx.personnelRequisition.update({
+            where: {
+                id: requisitionId,
+            },
             data: {
-                hiringConfirmationId: hiringConfirmation.id,
-                stepId: analistaStep.id,
-                decision: "APROBADA",
-                decidedById: createdById,
+                status: "PENDIENTE_APROBACION_TALENTO_HUMANO",
             },
         });
 
-        if (nextStep) {
-            const usersToNotify = await tx.user.findMany({
-                where: {
-                    role: nextStep.requiredRole,
-                },
-                select: {
-                    id: true,
-                },
-            });
-
-            if (usersToNotify.length > 0) {
-                await tx.notification.createMany({
-                    data: usersToNotify.map((userToNotify) => ({
-                        userId: userToNotify.id,
-                        personnelRequisitionId: requisitionId,
-                        type: "HIRING_CONFIRMATION_PENDING",
-                        title: "Confirmación de contratación pendiente",
-                        message: `Tienes una confirmación de contratación pendiente por aprobar como ${nextStep.name}.`,
-                    })),
-                });
-            }
+        if (!firstPendingStep) {
+            throw new Error(
+                "No se encontró un paso pendiente para aprobar la confirmación de contratación"
+            );
         }
 
-        const hiringConfirmationWithRelations =
-            await tx.personnelHiringConfirmation.findUnique({
-                where: {
-                    id: hiringConfirmation.id,
-                },
-                include: {
-                    requisition: {
-                        include: {
-                            department: {
-                                select: {
-                                    id: true,
-                                    code: true,
-                                    name: true,
-                                },
-                            },
-                            position: {
-                                select: {
-                                    id: true,
-                                    code: true,
-                                    name: true,
-                                },
-                            },
-                            city: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                },
-                            },
-                        },
-                    },
-                    createdBy: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            role: true,
-                        },
-                    },
-                    approvals: {
-                        include: {
-                            step: true,
-                            decidedBy: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    email: true,
-                                    role: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+        // Notifica al siguiente aprobador de Talento Humano.
+        await tx.notification.create({
+            data: {
+                userId: firstPendingStep.approverUserId,
+                personnelRequisitionId: requisitionId,
+                type: "HIRING_CONFIRMATION_PENDING",
+                title: "Confirmación de contratación pendiente",
+                message:
+                    "Tienes una confirmación de contratación pendiente por aprobar.",
+            },
+        });
 
-        return hiringConfirmationWithRelations;
+        return tx.personnelHiringConfirmation.findUnique({
+            where: {
+                id: hiringConfirmation.id,
+            },
+            include: {
+                requisition: {
+                    include: {
+                        department: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        position: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        city: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                },
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                approvals: {
+                    orderBy: {
+                        approvalOrder: "asc",
+                    },
+                    include: {
+                        approverPosition: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        approverUser: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true,
+                            },
+                        },
+                        decidedBy: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
     });
 
     return result;
 };
 
-// Registra la decisión de aprobación o rechazo de una confirmación de contratación.
+// Registra la decisión de aprobación, rechazo o cancelación de una confirmación de contratación.
 export const decidePersonnelHiringConfirmationService = async ({
     hiringConfirmationId,
     decision,
@@ -273,7 +264,11 @@ export const decidePersonnelHiringConfirmationService = async ({
                     id: hiringConfirmationId,
                 },
                 include: {
-                    approvals: true,
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                    },
                     requisition: {
                         select: {
                             id: true,
@@ -287,12 +282,24 @@ export const decidePersonnelHiringConfirmationService = async ({
             throw new Error("La confirmación de contratación no existe");
         }
 
+        if (
+            hiringConfirmation.status === "APROBADA" ||
+            hiringConfirmation.status === "RECHAZADA" ||
+            hiringConfirmation.status === "CANCELADA"
+        ) {
+            throw new Error(
+                "Esta confirmación de contratación ya tiene un estado final"
+            );
+        }
+
         const user = await tx.user.findUnique({
             where: {
                 id: decidedById,
             },
             select: {
                 id: true,
+                name: true,
+                email: true,
                 role: true,
             },
         });
@@ -301,128 +308,230 @@ export const decidePersonnelHiringConfirmationService = async ({
             throw new Error("El usuario que toma la decisión no existe");
         }
 
-        const approvalSteps =
-            await tx.hiringConfirmationApprovalStep.findMany({
-                where: {
-                    isActive: true,
-                },
-                orderBy: {
-                    stepOrder: "asc",
-                },
-            });
-
-        const hasRejectedOrCanceled = hiringConfirmation.approvals.some(
-            (approval) =>
-                approval.decision === "RECHAZADA" ||
-                approval.decision === "CANCELADA"
+        const currentApproval = hiringConfirmation.approvals.find(
+            (approval) => approval.isCurrent
         );
 
-        if (hasRejectedOrCanceled) {
+        if (!currentApproval) {
             throw new Error(
-                "Esta confirmación ya fue rechazada o cancelada"
+                "La confirmación no tiene un paso activo para decidir"
             );
         }
 
-        const pendingStep = approvalSteps.find((step) => {
-            return !hiringConfirmation.approvals.some((approval) => {
-                return approval.stepId === step.id;
-            });
-        });
-
-        if (!pendingStep) {
-            throw new Error(
-                "La confirmación de contratación ya completó su flujo de aprobación"
-            );
-        }
-
-        if (pendingStep.requiredRole !== user.role) {
+        if (currentApproval.approverUserId !== decidedById) {
             throw new Error(
                 "No tienes permisos para decidir esta confirmación de contratación"
             );
         }
 
-        const approval =
-            await tx.personnelHiringConfirmationApproval.create({
-                data: {
-                    hiringConfirmationId,
-                    stepId: pendingStep.id,
-                    decision,
-                    comment: comment?.trim() || null,
-                    decidedById,
-                },
-            });
-
-        if (decision === "RECHAZADA") {
-            await tx.notification.create({
-                data: {
-                    userId: hiringConfirmation.requisition.createdById,
-                    personnelRequisitionId:
-                        hiringConfirmation.requisition.id,
-                    type: "HIRING_CONFIRMATION_REJECTED",
-                    title: "Confirmación de contratación rechazada",
-                    message: `La confirmación de contratación fue rechazada en el paso ${pendingStep.name}.`,
-                },
-            });
-
-            return approval;
-        }
-
-        if (decision === "CANCELADA") {
-            await tx.notification.create({
-                data: {
-                    userId: hiringConfirmation.requisition.createdById,
-                    personnelRequisitionId:
-                        hiringConfirmation.requisition.id,
-                    type: "HIRING_CONFIRMATION_REJECTED",
-                    title: "Confirmación de contratación cancelada",
-                    message: `La confirmación de contratación fue cancelada en el paso ${pendingStep.name}.`,
-                },
-            });
-
-            return approval;
-        }
-
-        const nextStep = approvalSteps.find((step) => {
-            return step.stepOrder > pendingStep.stepOrder;
+        // Registra la decisión del paso actual.
+        await tx.personnelHiringConfirmationApproval.update({
+            where: {
+                id: currentApproval.id,
+            },
+            data: {
+                decision,
+                comment: comment?.trim() || null,
+                decidedById,
+                decidedAt: new Date(),
+                isCurrent: false,
+            },
         });
 
-        if (nextStep) {
-            const usersToNotify = await tx.user.findMany({
+        if (decision === "RECHAZADA" || decision === "CANCELADA") {
+            await tx.personnelHiringConfirmation.update({
                 where: {
-                    role: nextStep.requiredRole,
+                    id: hiringConfirmationId,
                 },
-                select: {
-                    id: true,
+                data: {
+                    status: decision,
                 },
             });
 
-            if (usersToNotify.length > 0) {
-                await tx.notification.createMany({
-                    data: usersToNotify.map((userToNotify) => ({
-                        userId: userToNotify.id,
-                        personnelRequisitionId:
-                            hiringConfirmation.requisition.id,
-                        type: "HIRING_CONFIRMATION_PENDING",
-                        title: "Confirmación de contratación pendiente",
-                        message: `Tienes una confirmación de contratación pendiente por aprobar como ${nextStep.name}.`,
-                    })),
-                });
-            }
-        } else {
+            await tx.personnelRequisition.update({
+                where: {
+                    id: hiringConfirmation.requisition.id,
+                },
+                data: {
+                    status: decision,
+                },
+            });
+
             await tx.notification.create({
                 data: {
                     userId: hiringConfirmation.requisition.createdById,
-                    personnelRequisitionId:
-                        hiringConfirmation.requisition.id,
-                    type: "HIRING_CONFIRMATION_APPROVED",
-                    title: "Proceso de requisición finalizado",
+                    personnelRequisitionId: hiringConfirmation.requisition.id,
+                    type: "HIRING_CONFIRMATION_REJECTED",
+                    title:
+                        decision === "RECHAZADA"
+                            ? "Confirmación de contratación rechazada"
+                            : "Confirmación de contratación cancelada",
                     message:
-                        "La requisición de personal fue aprobada completamente por Talento Humano.",
+                        decision === "RECHAZADA"
+                            ? "La confirmación de contratación fue rechazada."
+                            : "La confirmación de contratación fue cancelada.",
+                },
+            });
+
+            return tx.personnelHiringConfirmation.findUnique({
+                where: {
+                    id: hiringConfirmationId,
+                },
+                include: {
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                    },
                 },
             });
         }
 
-        return approval;
+        const nextApproval = hiringConfirmation.approvals.find(
+            (approval) =>
+                approval.approvalOrder === currentApproval.approvalOrder + 1
+        );
+
+        if (nextApproval) {
+            await tx.personnelHiringConfirmationApproval.update({
+                where: {
+                    id: nextApproval.id,
+                },
+                data: {
+                    isCurrent: true,
+                },
+            });
+
+            if (!nextApproval.approverUserId) {
+                throw new Error(
+                    "El siguiente paso no tiene un usuario aprobador asignado"
+                );
+            }
+
+            await tx.notification.create({
+                data: {
+                    userId: nextApproval.approverUserId,
+                    personnelRequisitionId: hiringConfirmation.requisition.id,
+                    type: "HIRING_CONFIRMATION_PENDING",
+                    title: "Confirmación de contratación pendiente",
+                    message:
+                        "Tienes una confirmación de contratación pendiente por aprobar.",
+                },
+            });
+
+            return tx.personnelHiringConfirmation.findUnique({
+                where: {
+                    id: hiringConfirmationId,
+                },
+                include: {
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                    },
+                },
+            });
+        }
+
+        // Si no hay más pasos, finaliza completamente la requisición.
+        await tx.personnelHiringConfirmation.update({
+            where: {
+                id: hiringConfirmationId,
+            },
+            data: {
+                status: "APROBADA",
+            },
+        });
+
+        await tx.personnelRequisition.update({
+            where: {
+                id: hiringConfirmation.requisition.id,
+            },
+            data: {
+                status: "APROBADA",
+            },
+        });
+
+        await tx.notification.create({
+            data: {
+                userId: hiringConfirmation.requisition.createdById,
+                personnelRequisitionId: hiringConfirmation.requisition.id,
+                type: "HIRING_CONFIRMATION_APPROVED",
+                title: "Proceso de requisición finalizado",
+                message:
+                    "La requisición de personal fue aprobada completamente por Talento Humano.",
+            },
+        });
+
+        return tx.personnelHiringConfirmation.findUnique({
+            where: {
+                id: hiringConfirmationId,
+            },
+            include: {
+                requisition: {
+                    include: {
+                        department: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        position: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        city: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                },
+                createdBy: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        role: true,
+                    },
+                },
+                approvals: {
+                    orderBy: {
+                        approvalOrder: "asc",
+                    },
+                    include: {
+                        approverPosition: {
+                            select: {
+                                id: true,
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        approverUser: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true,
+                            },
+                        },
+                        decidedBy: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                role: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
     });
 
     return result;
