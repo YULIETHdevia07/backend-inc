@@ -9,6 +9,12 @@ import {
     getApprovalStepsFromCreatorLevel,
 } from "../../utils/humanTalent/requisitionApprovalFlow.helper.js";
 import { validatePersonnelRequisitionCreator } from "../../utils/humanTalent/requisitionCreator.helper.js";
+import {
+    notifyRequisitionNextApprovalService,
+    notifyRequisitionPendingApprovalService,
+    notifyRequisitionReadyForHumanTalentService,
+    notifyRequisitionRejectedService
+} from "../notifications/humanTalentNotification.service.js";
 
 type AuthenticatedUser = NonNullable<AuthRequest["user"]>;
 
@@ -118,7 +124,26 @@ export const createPersonnelRequisitionService = async ({
     const cleanInternContractType =
         contractType === "PRACTICANTE" ? internContractType : null;
 
-    const requisition = await prisma.$transaction(async (tx) => {
+    type RequisitionNotificationToSend =
+        | {
+            type: "PENDING_APPROVAL";
+            userId: number;
+            requisitionId: number;
+            createdByName: string;
+            positionName: string;
+            departmentName: string;
+        }
+        | {
+            type: "READY_FOR_HUMAN_TALENT";
+            userId: number;
+            requisitionId: number;
+            positionName: string;
+            departmentName: string;
+        };
+
+    const result = await prisma.$transaction(async (tx) => {
+        let notificationToSend: RequisitionNotificationToSend | null = null;
+
         // Construye el flujo completo según la jerarquía del departamento.
         const approvalSteps = await buildRequisitionApprovalFlow(tx, departmentId);
 
@@ -186,15 +211,14 @@ export const createPersonnelRequisitionService = async ({
 
         if (firstPendingStep) {
             // Notifica al primer usuario que debe aprobar la requisición.
-            await tx.notification.create({
-                data: {
-                    userId: firstPendingStep.approverUserId,
-                    personnelRequisitionId: createdRequisition.id,
-                    type: "REQUISITION_PENDING_APPROVAL",
-                    title: "Nueva requisición pendiente",
-                    message: "Tienes una requisición pendiente por aprobar.",
-                },
-            });
+            notificationToSend = {
+                type: "PENDING_APPROVAL",
+                userId: firstPendingStep.approverUserId,
+                requisitionId: createdRequisition.id,
+                createdByName: user.name,
+                positionName: position.name,
+                departmentName: department.name,
+            };
         } else {
             // Si todos los pasos jerárquicos fueron aprobados automáticamente, notifica a Talento Humano.
             const humanTalentConfig =
@@ -231,19 +255,16 @@ export const createPersonnelRequisitionService = async ({
                 );
             }
 
-            await tx.notification.create({
-                data: {
-                    userId: humanTalentAssignment.userId,
-                    personnelRequisitionId: createdRequisition.id,
-                    type: "HIRING_CONFIRMATION_PENDING",
-                    title: "Confirmación de contratación pendiente",
-                    message:
-                        "Una requisición fue aprobada y está pendiente de confirmación por Talento Humano.",
-                },
-            });
+            notificationToSend = {
+                type: "READY_FOR_HUMAN_TALENT",
+                userId: humanTalentAssignment.userId,
+                requisitionId: createdRequisition.id,
+                positionName: position.name,
+                departmentName: department.name,
+            };
         }
 
-        return tx.personnelRequisition.findUnique({
+        const requisition = await tx.personnelRequisition.findUnique({
             where: {
                 id: createdRequisition.id,
             },
@@ -315,9 +336,33 @@ export const createPersonnelRequisitionService = async ({
                 },
             },
         });
+
+        return {
+            requisition,
+            notificationToSend,
+        };
     });
 
-    return requisition;
+    if (result.notificationToSend?.type === "PENDING_APPROVAL") {
+        await notifyRequisitionPendingApprovalService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.createdByName,
+            result.notificationToSend.positionName,
+            result.notificationToSend.departmentName
+        );
+    }
+
+    if (result.notificationToSend?.type === "READY_FOR_HUMAN_TALENT") {
+        await notifyRequisitionReadyForHumanTalentService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.positionName,
+            result.notificationToSend.departmentName
+        );
+    }
+
+    return result.requisition;
 };
 
 // Valida si el usuario autenticado es Auxiliar activo de Talento Humano.
@@ -555,12 +600,47 @@ export const decidePersonnelRequisitionService = async (
         throw new Error("No puedes decidir una requisición por otro usuario");
     }
 
-    const requisition = await prisma.$transaction(async (tx) => {
+    type RequisitionDecisionNotification =
+        | {
+            type: "REJECTED";
+            userId: number;
+            requisitionId: number;
+            decidedByName: string;
+            decision: "RECHAZADA" | "CANCELADA";
+            comment?: string | null;
+        }
+        | {
+            type: "NEXT_APPROVAL";
+            userId: number;
+            requisitionId: number;
+            decidedByName: string;
+        }
+        | {
+            type: "READY_FOR_HUMAN_TALENT";
+            userId: number;
+            requisitionId: number;
+            positionName: string;
+            departmentName: string;
+        };
+
+    const result = await prisma.$transaction(async (tx) => {
+        let notificationToSend: RequisitionDecisionNotification | null = null;
+
         const currentRequisition = await tx.personnelRequisition.findUnique({
             where: {
                 id: requisitionId,
             },
             include: {
+                department: {
+                    select: {
+                        name: true,
+                    },
+                },
+                position: {
+                    select: {
+                        name: true,
+                    },
+                },
                 createdBy: {
                     select: {
                         id: true,
@@ -628,23 +708,19 @@ export const decidePersonnelRequisitionService = async (
                 },
             });
 
-            await tx.notification.create({
-                data: {
-                    userId: currentRequisition.createdById,
-                    personnelRequisitionId: requisitionId,
-                    type: "REQUISITION_REJECTED",
-                    title:
-                        decision === "RECHAZADA"
-                            ? "Requisición rechazada"
-                            : "Requisición cancelada",
-                    message:
-                        decision === "RECHAZADA"
-                            ? "Tu requisición de personal fue rechazada."
-                            : "Tu requisición de personal fue cancelada.",
-                },
-            });
+            notificationToSend = {
+                type: "REJECTED",
+                userId: currentRequisition.createdById,
+                requisitionId,
+                decidedByName: "El aprobador actual",
+                decision,
+                comment: comment?.trim() || null,
+            };
 
-            return updatedRequisition;
+            return {
+                requisition: updatedRequisition,
+                notificationToSend,
+            };
         }
 
         const nextApproval = currentRequisition.approvals.find(
@@ -669,17 +745,14 @@ export const decidePersonnelRequisitionService = async (
                 );
             }
 
-            await tx.notification.create({
-                data: {
-                    userId: nextApproval.approverUserId,
-                    personnelRequisitionId: requisitionId,
-                    type: "REQUISITION_PENDING_APPROVAL",
-                    title: "Nueva requisición pendiente",
-                    message: "Tienes una requisición pendiente por aprobar.",
-                },
-            });
+            notificationToSend = {
+                type: "NEXT_APPROVAL",
+                userId: nextApproval.approverUserId,
+                requisitionId,
+                decidedByName: "El aprobador anterior",
+            };
 
-            return tx.personnelRequisition.update({
+            const updatedRequisition = await tx.personnelRequisition.update({
                 where: {
                     id: requisitionId,
                 },
@@ -687,6 +760,11 @@ export const decidePersonnelRequisitionService = async (
                     status: "EN_APROBACION",
                 },
             });
+
+            return {
+                requisition: updatedRequisition,
+                notificationToSend,
+            };
         }
 
         // Si no hay más pasos jerárquicos, pasa a confirmación de Talento Humano.
@@ -732,23 +810,50 @@ export const decidePersonnelRequisitionService = async (
             );
         }
 
-        await tx.notification.create({
-            data: {
-                userId: humanTalentAssignment.userId,
-                personnelRequisitionId: requisitionId,
-                type: "HIRING_CONFIRMATION_PENDING",
-                title: "Confirmación de contratación pendiente",
-                message:
-                    "Una requisición fue aprobada y está pendiente de confirmación por Talento Humano.",
-            },
-        });
+        notificationToSend = {
+            type: "READY_FOR_HUMAN_TALENT",
+            userId: humanTalentAssignment.userId,
+            requisitionId,
+            positionName: currentRequisition.position.name,
+            departmentName: currentRequisition.department.name,
+        };
 
-        return updatedRequisition;
+        return {
+            requisition: updatedRequisition,
+            notificationToSend,
+        };
     });
+
+    if (result.notificationToSend?.type === "REJECTED") {
+        await notifyRequisitionRejectedService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.decidedByName,
+            result.notificationToSend.decision,
+            result.notificationToSend.comment
+        );
+    }
+
+    if (result.notificationToSend?.type === "NEXT_APPROVAL") {
+        await notifyRequisitionNextApprovalService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.decidedByName
+        );
+    }
+
+    if (result.notificationToSend?.type === "READY_FOR_HUMAN_TALENT") {
+        await notifyRequisitionReadyForHumanTalentService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.positionName,
+            result.notificationToSend.departmentName
+        );
+    }
 
     return prisma.personnelRequisition.findUnique({
         where: {
-            id: requisition.id,
+            id: result.requisition.id,
         },
         include: {
             department: {

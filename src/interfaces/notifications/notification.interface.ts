@@ -6,4 +6,5 @@ export interface CreateNotificationData {
   type: NotificationType;
   userId: number;
   pqrId?: number;
+  personnelRequisitionId?: number;
 }

@@ -9,6 +9,11 @@ import type {
     CreatePersonnelHiringConfirmationData,
     DecidePersonnelHiringConfirmationData,
 } from "../../interfaces/humanTalent/personnelHiringConfirmation.interface.js";
+import {
+    notifyHiringConfirmationApprovedService,
+    notifyHiringConfirmationPendingService,
+    notifyHiringConfirmationRejectedService
+} from "../notifications/humanTalentNotification.service.js";
 
 // Crea la confirmación final de contratación de una requisición.
 export const createPersonnelHiringConfirmationService = async ({
@@ -20,13 +25,34 @@ export const createPersonnelHiringConfirmationService = async ({
     approvedSalary,
     createdById,
 }: CreatePersonnelHiringConfirmationData) => {
+    type HiringConfirmationNotificationToSend = {
+        type: "PENDING";
+        userId: number;
+        requisitionId: number;
+        positionName: string;
+        departmentName: string;
+    };
+
     const result = await prisma.$transaction(async (tx) => {
+        let notificationToSend: HiringConfirmationNotificationToSend | null =
+            null;
+
         const requisition = await tx.personnelRequisition.findUnique({
             where: {
                 id: requisitionId,
             },
             include: {
                 hiringConfirmation: true,
+                department: {
+                    select: {
+                        name: true,
+                    },
+                },
+                position: {
+                    select: {
+                        name: true,
+                    },
+                },
             },
         });
 
@@ -164,90 +190,101 @@ export const createPersonnelHiringConfirmationService = async ({
             );
         }
 
-        // Notifica al siguiente aprobador de Talento Humano.
-        await tx.notification.create({
-            data: {
-                userId: firstPendingStep.approverUserId,
-                personnelRequisitionId: requisitionId,
-                type: "HIRING_CONFIRMATION_PENDING",
-                title: "Confirmación de contratación pendiente",
-                message:
-                    "Tienes una confirmación de contratación pendiente por aprobar.",
-            },
-        });
+        notificationToSend = {
+            type: "PENDING",
+            userId: firstPendingStep.approverUserId,
+            requisitionId,
+            positionName: requisition.position.name,
+            departmentName: requisition.department.name,
+        };
 
-        return tx.personnelHiringConfirmation.findUnique({
-            where: {
-                id: hiringConfirmation.id,
-            },
-            include: {
-                requisition: {
-                    include: {
-                        department: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
+        const createdHiringConfirmation =
+            await tx.personnelHiringConfirmation.findUnique({
+                where: {
+                    id: hiringConfirmation.id,
+                },
+                include: {
+                    requisition: {
+                        include: {
+                            department: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            position: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            city: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
                             },
                         },
-                        position: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
+                    },
+                    createdBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
                         },
-                        city: {
-                            select: {
-                                id: true,
-                                name: true,
+                    },
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                        include: {
+                            approverPosition: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            approverUser: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                },
+                            },
+                            decidedBy: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                },
                             },
                         },
                     },
                 },
-                createdBy: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                    },
-                },
-                approvals: {
-                    orderBy: {
-                        approvalOrder: "asc",
-                    },
-                    include: {
-                        approverPosition: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
-                        },
-                        approverUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                            },
-                        },
-                        decidedBy: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+            });
+
+        return {
+            hiringConfirmation: createdHiringConfirmation,
+            notificationToSend,
+        };
     });
 
-    return result;
+    if (result.notificationToSend?.type === "PENDING") {
+        await notifyHiringConfirmationPendingService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.positionName,
+            result.notificationToSend.departmentName
+        );
+    }
+
+    return result.hiringConfirmation;
 };
 
 // Registra la decisión de aprobación, rechazo o cancelación de una confirmación de contratación.
@@ -257,7 +294,33 @@ export const decidePersonnelHiringConfirmationService = async ({
     comment,
     decidedById,
 }: DecidePersonnelHiringConfirmationData) => {
+    type HiringConfirmationDecisionNotification =
+        | {
+            type: "REJECTED";
+            userId: number;
+            requisitionId: number;
+            decidedByName: string;
+            decision: "RECHAZADA" | "CANCELADA";
+            comment?: string | null;
+        }
+        | {
+            type: "PENDING";
+            userId: number;
+            requisitionId: number;
+            positionName: string;
+            departmentName: string;
+        }
+        | {
+            type: "APPROVED";
+            userId: number;
+            requisitionId: number;
+        };
+
     const result = await prisma.$transaction(async (tx) => {
+        let notificationToSend:
+            | HiringConfirmationDecisionNotification
+            | null = null;
+
         const hiringConfirmation =
             await tx.personnelHiringConfirmation.findUnique({
                 where: {
@@ -273,6 +336,16 @@ export const decidePersonnelHiringConfirmationService = async ({
                         select: {
                             id: true,
                             createdById: true,
+                            department: {
+                                select: {
+                                    name: true,
+                                },
+                            },
+                            position: {
+                                select: {
+                                    name: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -357,34 +430,33 @@ export const decidePersonnelHiringConfirmationService = async ({
                 },
             });
 
-            await tx.notification.create({
-                data: {
-                    userId: hiringConfirmation.requisition.createdById,
-                    personnelRequisitionId: hiringConfirmation.requisition.id,
-                    type: "HIRING_CONFIRMATION_REJECTED",
-                    title:
-                        decision === "RECHAZADA"
-                            ? "Confirmación de contratación rechazada"
-                            : "Confirmación de contratación cancelada",
-                    message:
-                        decision === "RECHAZADA"
-                            ? "La confirmación de contratación fue rechazada."
-                            : "La confirmación de contratación fue cancelada.",
-                },
-            });
+            notificationToSend = {
+                type: "REJECTED",
+                userId: hiringConfirmation.requisition.createdById,
+                requisitionId: hiringConfirmation.requisition.id,
+                decidedByName: user.name,
+                decision,
+                comment: comment?.trim() || null,
+            };
 
-            return tx.personnelHiringConfirmation.findUnique({
-                where: {
-                    id: hiringConfirmationId,
-                },
-                include: {
-                    approvals: {
-                        orderBy: {
-                            approvalOrder: "asc",
+            const updatedHiringConfirmation =
+                await tx.personnelHiringConfirmation.findUnique({
+                    where: {
+                        id: hiringConfirmationId,
+                    },
+                    include: {
+                        approvals: {
+                            orderBy: {
+                                approvalOrder: "asc",
+                            },
                         },
                     },
-                },
-            });
+                });
+
+            return {
+                hiringConfirmation: updatedHiringConfirmation,
+                notificationToSend,
+            };
         }
 
         const nextApproval = hiringConfirmation.approvals.find(
@@ -408,29 +480,32 @@ export const decidePersonnelHiringConfirmationService = async ({
                 );
             }
 
-            await tx.notification.create({
-                data: {
-                    userId: nextApproval.approverUserId,
-                    personnelRequisitionId: hiringConfirmation.requisition.id,
-                    type: "HIRING_CONFIRMATION_PENDING",
-                    title: "Confirmación de contratación pendiente",
-                    message:
-                        "Tienes una confirmación de contratación pendiente por aprobar.",
-                },
-            });
+            notificationToSend = {
+                type: "PENDING",
+                userId: nextApproval.approverUserId,
+                requisitionId: hiringConfirmation.requisition.id,
+                positionName: hiringConfirmation.requisition.position.name,
+                departmentName: hiringConfirmation.requisition.department.name,
+            };
 
-            return tx.personnelHiringConfirmation.findUnique({
-                where: {
-                    id: hiringConfirmationId,
-                },
-                include: {
-                    approvals: {
-                        orderBy: {
-                            approvalOrder: "asc",
+            const updatedHiringConfirmation =
+                await tx.personnelHiringConfirmation.findUnique({
+                    where: {
+                        id: hiringConfirmationId,
+                    },
+                    include: {
+                        approvals: {
+                            orderBy: {
+                                approvalOrder: "asc",
+                            },
                         },
                     },
-                },
-            });
+                });
+
+            return {
+                hiringConfirmation: updatedHiringConfirmation,
+                notificationToSend,
+            };
         }
 
         // Si no hay más pasos, finaliza completamente la requisición.
@@ -452,87 +527,114 @@ export const decidePersonnelHiringConfirmationService = async ({
             },
         });
 
-        await tx.notification.create({
-            data: {
-                userId: hiringConfirmation.requisition.createdById,
-                personnelRequisitionId: hiringConfirmation.requisition.id,
-                type: "HIRING_CONFIRMATION_APPROVED",
-                title: "Proceso de requisición finalizado",
-                message:
-                    "La requisición de personal fue aprobada completamente por Talento Humano.",
-            },
-        });
+        notificationToSend = {
+            type: "APPROVED",
+            userId: hiringConfirmation.requisition.createdById,
+            requisitionId: hiringConfirmation.requisition.id,
+        };
 
-        return tx.personnelHiringConfirmation.findUnique({
-            where: {
-                id: hiringConfirmationId,
-            },
-            include: {
-                requisition: {
-                    include: {
-                        department: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
+        const approvedHiringConfirmation =
+            await tx.personnelHiringConfirmation.findUnique({
+                where: {
+                    id: hiringConfirmationId,
+                },
+                include: {
+                    requisition: {
+                        include: {
+                            department: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            position: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            city: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
                             },
                         },
-                        position: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
+                    },
+                    createdBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
                         },
-                        city: {
-                            select: {
-                                id: true,
-                                name: true,
+                    },
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                        include: {
+                            approverPosition: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            approverUser: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                },
+                            },
+                            decidedBy: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                },
                             },
                         },
                     },
                 },
-                createdBy: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                    },
-                },
-                approvals: {
-                    orderBy: {
-                        approvalOrder: "asc",
-                    },
-                    include: {
-                        approverPosition: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
-                        },
-                        approverUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                            },
-                        },
-                        decidedBy: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+            });
+
+        return {
+            hiringConfirmation: approvedHiringConfirmation,
+            notificationToSend,
+        };
     });
 
-    return result;
+    if (result.notificationToSend?.type === "REJECTED") {
+        await notifyHiringConfirmationRejectedService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.decidedByName,
+            result.notificationToSend.decision,
+            result.notificationToSend.comment
+        );
+    }
+
+    if (result.notificationToSend?.type === "PENDING") {
+        await notifyHiringConfirmationPendingService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId,
+            result.notificationToSend.positionName,
+            result.notificationToSend.departmentName
+        );
+    }
+
+    if (result.notificationToSend?.type === "APPROVED") {
+        await notifyHiringConfirmationApprovedService(
+            result.notificationToSend.userId,
+            result.notificationToSend.requisitionId
+        );
+    }
+
+    return result.hiringConfirmation;
 };
