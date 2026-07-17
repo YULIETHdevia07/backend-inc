@@ -1,3 +1,4 @@
+import { Role } from "@prisma/client";
 import type { PrismaExecutor } from "../../interfaces/humanTalent/personnelRequisition.interface.js";
 
 // Cargos autorizados para crear requisiciones de personal.
@@ -29,6 +30,19 @@ export const validatePersonnelRequisitionCreator = async (
     prismaExecutor: PrismaExecutor,
     userId: number
 ) => {
+ // Validar si es administrador
+    const user = await prismaExecutor.user.findUnique({
+        where: { id: userId },
+        select: {
+            role: true,
+        },
+    });
+
+    if (user?.role === Role.ADMIN) {
+        return null;
+    }
+
+    // Validar cargo autorizado
     const assignment = await prismaExecutor.userPositionAssignment.findFirst({
         where: {
             userId,

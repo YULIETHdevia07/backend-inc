@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
     createPersonnelRequisition,
     decidePersonnelRequisition,
+    getPersonnelRequisitionByIdController,
     getPersonnelRequisitions,
 } from "../../controllers/humanTalent/personnelRequisition.controller.js";
 
@@ -15,6 +16,12 @@ router.get(
     "/",
     authMiddleware,
     getPersonnelRequisitions
+);
+
+router.get(
+    "/:id",
+    authMiddleware,
+    getPersonnelRequisitionByIdController
 );
 
 // Crea una nueva requisición de personal.

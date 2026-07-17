@@ -117,6 +117,7 @@ model User {
   email    String @unique
   password String
   role     Role   @default(USER)
+  signatureUrl String?
 
   pqrsCreated  PQR[] @relation("UserPqrs")
   pqrsAssigned PQR[] @relation("AgentPqrs")

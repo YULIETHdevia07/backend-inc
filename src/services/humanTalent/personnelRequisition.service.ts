@@ -295,6 +295,7 @@ export const createPersonnelRequisitionService = async ({
                         name: true,
                         email: true,
                         role: true,
+                        signatureUrl: true,
                     },
                 },
                 approvals: {
@@ -322,6 +323,7 @@ export const createPersonnelRequisitionService = async ({
                                 name: true,
                                 email: true,
                                 role: true,
+                                signatureUrl: true,
                             },
                         },
                         decidedBy: {
@@ -330,6 +332,7 @@ export const createPersonnelRequisitionService = async ({
                                 name: true,
                                 email: true,
                                 role: true,
+                                signatureUrl: true,
                             },
                         },
                     },
@@ -499,6 +502,7 @@ export const getPersonnelRequisitionsService = async (
                     name: true,
                     email: true,
                     role: true,
+                    signatureUrl: true,
                 },
             },
             approvals: {
@@ -526,6 +530,7 @@ export const getPersonnelRequisitionsService = async (
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                     decidedBy: {
@@ -534,6 +539,7 @@ export const getPersonnelRequisitionsService = async (
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                 },
@@ -546,6 +552,7 @@ export const getPersonnelRequisitionsService = async (
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                     approvals: {
@@ -566,6 +573,7 @@ export const getPersonnelRequisitionsService = async (
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                             decidedBy: {
@@ -574,6 +582,7 @@ export const getPersonnelRequisitionsService = async (
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                         },
@@ -584,6 +593,160 @@ export const getPersonnelRequisitionsService = async (
     });
 
     return requisitions;
+};
+
+// Obtiene el detalle completo de una requisición de personal.
+export const getPersonnelRequisitionByIdService = async (
+    requisitionId: number,
+    user: AuthenticatedUser
+) => {
+    const requisition = await prisma.personnelRequisition.findUnique({
+        where: {
+            id: requisitionId,
+        },
+        include: {
+            department: {
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                },
+            },
+            position: {
+                select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                },
+            },
+            city: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            createdBy: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    signatureUrl: true,
+                },
+            },
+            approvals: {
+                orderBy: {
+                    approvalOrder: "asc",
+                },
+                include: {
+                    department: {
+                        select: {
+                            id: true,
+                            code: true,
+                            name: true,
+                        },
+                    },
+                    approverPosition: {
+                        select: {
+                            id: true,
+                            code: true,
+                            name: true,
+                        },
+                    },
+                    approverUser: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            signatureUrl: true,
+                        },
+                    },
+                    decidedBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            signatureUrl: true,
+                        },
+                    },
+                },
+            },
+            hiringConfirmation: {
+                include: {
+                    createdBy: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                            signatureUrl: true,
+                        },
+                    },
+                    approvals: {
+                        orderBy: {
+                            approvalOrder: "asc",
+                        },
+                        include: {
+                            approverPosition: {
+                                select: {
+                                    id: true,
+                                    code: true,
+                                    name: true,
+                                },
+                            },
+                            approverUser: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                    signatureUrl: true,
+                                },
+                            },
+                            decidedBy: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    email: true,
+                                    role: true,
+                                    signatureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!requisition) {
+        throw new Error("La requisición no existe");
+    }
+
+    const canView =
+        user.role === "ADMIN" ||
+        requisition.createdById === user.id ||
+        requisition.approvals.some((approval) => {
+            return (
+                approval.approverUserId === user.id ||
+                approval.decidedById === user.id
+            );
+        }) ||
+        requisition.hiringConfirmation?.createdById === user.id ||
+        requisition.hiringConfirmation?.approvals.some((approval) => {
+            return (
+                approval.approverUserId === user.id ||
+                approval.decidedById === user.id
+            );
+        });
+
+    if (!canView) {
+        throw new Error("No tienes permisos para ver esta requisición");
+    }
+
+    return requisition;
 };
 
 // Aprueba, rechaza o cancela el paso actual de una requisición.
@@ -682,6 +845,26 @@ export const decidePersonnelRequisitionService = async (
         if (!canDecide) {
             throw new Error("No tienes permisos para decidir esta requisición");
         }
+
+        const approverUser = await tx.user.findUnique({
+            where: {
+                id: decidedById,
+            },
+            select: {
+                id: true,
+                signatureUrl: true,
+            },
+        });
+
+        if (!approverUser) {
+            throw new Error("El usuario que toma la decisión no existe");
+        }
+
+        // if (!approverUser.signatureUrl) {
+        //     throw new Error(
+        //         "Debes tener una firma registrada para aprobar, rechazar o cancelar una requisición"
+        //     );
+        // }
 
         // Registra la decisión del paso actual.
         await tx.personnelRequisitionApproval.update({
@@ -882,6 +1065,7 @@ export const decidePersonnelRequisitionService = async (
                     name: true,
                     email: true,
                     role: true,
+                    signatureUrl: true,
                 },
             },
             approvals: {
@@ -909,6 +1093,7 @@ export const decidePersonnelRequisitionService = async (
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                     decidedBy: {
@@ -917,6 +1102,7 @@ export const decidePersonnelRequisitionService = async (
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                 },

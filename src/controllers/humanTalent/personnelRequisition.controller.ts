@@ -11,6 +11,7 @@ import {
     createPersonnelRequisitionService,
     decidePersonnelRequisitionService,
     getPersonnelRequisitionsService,
+    getPersonnelRequisitionByIdService,
 } from "../../services/humanTalent/personnelRequisition.service.js";
 
 // Crea una nueva requisición de personal.
@@ -218,6 +219,46 @@ export const getPersonnelRequisitions = async (
                 error instanceof Error
                     ? error.message
                     : "Error al obtener las requisiciones de personal",
+        });
+    }
+};
+
+// Obtiene el detalle completo de una requisición de personal.
+export const getPersonnelRequisitionByIdController = async (
+    req: AuthRequest,
+    res: Response
+) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                message: "Usuario no autenticado",
+            });
+        }
+
+        const requisitionId = Number(req.params.id);
+
+        if (!requisitionId || Number.isNaN(requisitionId)) {
+            return res.status(400).json({
+                message: "El id de la requisición no es válido",
+            });
+        }
+
+        const requisition = await getPersonnelRequisitionByIdService(
+            requisitionId,
+            req.user
+        );
+
+        return res.status(200).json({
+            requisition,
+        });
+    } catch (error) {
+        const message =
+            error instanceof Error
+                ? error.message
+                : "Error al obtener el detalle de la requisición";
+
+        return res.status(400).json({
+            message,
         });
     }
 };

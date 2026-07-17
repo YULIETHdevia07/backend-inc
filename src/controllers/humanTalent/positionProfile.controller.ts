@@ -1,12 +1,35 @@
-import type { Request, Response } from "express";
+import type { Response } from "express";
+
 import { getActivePositionProfilesService } from "../../services/humanTalent/positionProfile.service.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
+
 
 export const getActivePositionProfiles = async (
-    req: Request,
+    req: AuthRequest,
     res: Response
 ) => {
     try {
-        const positionProfiles = await getActivePositionProfilesService();
+        if (!req.user) {
+            return res.status(401).json({
+                message: "Usuario no autenticado",
+            });
+        }
+
+        const departmentId = req.query.departmentId
+            ? Number(req.query.departmentId)
+            : undefined;
+
+        if (req.query.departmentId && Number.isNaN(departmentId)) {
+            return res.status(400).json({
+                message: "El id del departamento no es válido",
+            });
+        }
+
+        const positionProfiles = await getActivePositionProfilesService(
+            req.user.id,
+            req.user.role,
+            departmentId
+        );
 
         return res.status(200).json({
             message: "Perfiles de cargo obtenidos correctamente",

@@ -1,9 +1,24 @@
-import type { Request, Response } from "express";
-import { getActiveDepartmentsService } from "../../services/humanTalent/department.service.js";
+import type { Response } from "express";
 
-export const getActiveDepartments = async (req: Request, res: Response) => {
+import { getActiveDepartmentsService } from "../../services/humanTalent/department.service.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
+
+
+export const getActiveDepartments = async (
+    req: AuthRequest,
+    res: Response
+) => {
     try {
-        const departments = await getActiveDepartmentsService();
+        if (!req.user) {
+            return res.status(401).json({
+                message: "Usuario no autenticado",
+            });
+        }
+
+        const departments = await getActiveDepartmentsService(
+            req.user.id,
+            req.user.role
+        );
 
         return res.status(200).json({
             message: "Áreas obtenidas correctamente",

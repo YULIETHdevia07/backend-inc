@@ -81,6 +81,7 @@ export const createPersonnelHiringConfirmationService = async ({
                 name: true,
                 email: true,
                 role: true,
+                signatureUrl: true,
             },
         });
 
@@ -234,6 +235,7 @@ export const createPersonnelHiringConfirmationService = async ({
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                     approvals: {
@@ -254,6 +256,7 @@ export const createPersonnelHiringConfirmationService = async ({
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                             decidedBy: {
@@ -262,6 +265,7 @@ export const createPersonnelHiringConfirmationService = async ({
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                         },
@@ -374,12 +378,19 @@ export const decidePersonnelHiringConfirmationService = async ({
                 name: true,
                 email: true,
                 role: true,
+                signatureUrl: true,
             },
         });
 
         if (!user) {
             throw new Error("El usuario que toma la decisión no existe");
         }
+
+        // if (!user.signatureUrl) {
+        //     throw new Error(
+        //         "Debes tener una firma registrada para aprobar, rechazar o cancelar la confirmación de contratación"
+        //     );
+        // }
 
         const currentApproval = hiringConfirmation.approvals.find(
             (approval) => approval.isCurrent
@@ -569,6 +580,7 @@ export const decidePersonnelHiringConfirmationService = async ({
                             name: true,
                             email: true,
                             role: true,
+                            signatureUrl: true,
                         },
                     },
                     approvals: {
@@ -589,6 +601,7 @@ export const decidePersonnelHiringConfirmationService = async ({
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                             decidedBy: {
@@ -597,6 +610,7 @@ export const decidePersonnelHiringConfirmationService = async ({
                                     name: true,
                                     email: true,
                                     role: true,
+                                    signatureUrl: true,
                                 },
                             },
                         },
