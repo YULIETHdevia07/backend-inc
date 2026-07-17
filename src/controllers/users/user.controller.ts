@@ -3,11 +3,15 @@ import {
   getUserByIdService,
   updateUserRoleService,
   getAgentsService,
+  updateUserSignatureService,
 } from "../../services/users/user.service.js";
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../../config/client.js";
+import type { AuthRequest } from "../../interfaces/auth/auth.interface.js";
+import fs from "fs";
+import path from "path";
 
 export const getUsers = async (
   req: Request,
@@ -82,7 +86,7 @@ export const loginUser = async (
         },
       },
     });
-    
+
     if (!user) {
       return res.status(400).json({
         message: "Credenciales inválidas",
@@ -186,6 +190,58 @@ export const updateUserRole = async (
     return res.status(500).json({
       message: "Error al actualizar el rol del usuario",
       error,
+    });
+  }
+};
+
+// Sube y guarda la firma del usuario autenticado.
+export const uploadUserSignatureController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Debes seleccionar una imagen para la firma",
+      });
+    }
+
+    const signatureUrl = `/uploads/signatures/${req.file.filename}`;
+
+    const user = await updateUserSignatureService(
+      req.user.id,
+      signatureUrl
+    );
+
+    return res.status(200).json({
+      message: "Firma registrada correctamente",
+      user,
+    });
+  } catch (error) {
+     /*
+     * Si multer ya guardó el archivo, pero luego falla la validación
+     * porque el usuario ya tenía firma, se elimina el archivo nuevo.
+     */
+    if (req.file) {
+      const filePath = path.resolve(req.file.path);
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Error al subir la firma";
+
+    return res.status(400).json({
+      message,
     });
   }
 };

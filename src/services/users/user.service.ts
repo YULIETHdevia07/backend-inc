@@ -11,6 +11,7 @@ export const getAllUsersService = async () => {
             name: true,
             email: true,
             role: true,
+            signatureUrl: true,
         },
     });
 
@@ -62,8 +63,51 @@ export const getAgentsService = async () => {
             name: true,
             email: true,
             role: true,
+            signatureUrl: true,
         },
     });
 
     return agents;
+};
+
+// Actualiza la firma del usuario autenticado.
+export const updateUserSignatureService = async (
+    userId: number,
+    signatureUrl: string
+) => {
+    const currentUser = await prisma.user.findUnique({
+        where: {
+            id: userId,
+        },
+        select: {
+            id: true,
+            signatureUrl: true,
+        },
+    });
+
+    if (!currentUser) {
+        throw new Error("El usuario no existe");
+    }
+
+    if (currentUser.signatureUrl) {
+        throw new Error("El usuario ya tiene una firma registrada");
+    }
+
+    const user = await prisma.user.update({
+        where: {
+            id: userId,
+        },
+        data: {
+            signatureUrl,
+        },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            signatureUrl: true,
+        },
+    });
+
+    return user;
 };
