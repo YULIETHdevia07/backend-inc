@@ -144,33 +144,79 @@ Crea o actualiza las tablas sin utilizar las migraciones. Es útil para crear la
 
 ---
 
-# 6. Ejecutar seed de Prisma
+# 6. Cargar la estructura organizacional de Talento Humano
 
 ## Comando
 
 ```bash
-npx prisma db seed
+npx tsx prisma/seed-humanTalent.ts
 ```
 
 ## Descripción
 
-Este comando ejecuta el archivo de seed configurado en Prisma.
+Este comando ejecuta directamente el archivo:
 
-El seed se usa para insertar datos iniciales necesarios para que el sistema funcione correctamente.
+```text
+prisma/seed-humanTalent.ts
+```
 
-En este proyecto carga información base como:
+El archivo carga o actualiza la información necesaria para el módulo de Talento Humano, como:
 
-- Ciudades
-- Departamentos o áreas
-- Perfiles de cargo
-- Pasos de aprobación de requisiciones
-- Pasos de VoBo de contratación
+* Departamentos y áreas.
+* Perfiles de cargo.
+* Cargos aprobadores.
+* Jerarquía organizacional.
+* Departamentos superiores.
+* Configuración del flujo de Talento Humano.
+* Cargos responsables de cada departamento.
 
-Este comando debe ejecutarse después de las migraciones, porque primero deben existir las tablas en la base de datos.
+Este seed debe ejecutarse después de crear o actualizar las tablas de la base de datos.
+
+También debe ejecutarse antes del seed de usuarios de prueba, porque los usuarios necesitan que los cargos ya existan en la tabla de perfiles de cargo.
 
 ---
 
-# 7. Iniciar el servidor
+# 7. Cargar los usuarios de prueba de Talento Humano
+
+## Comando
+
+```bash
+npx tsx prisma/seed-test-users-humanTalent.ts
+```
+
+## Descripción
+
+Este comando ejecuta directamente el archivo:
+
+```text
+prisma/seed-test-users-humanTalent.ts
+```
+
+El archivo crea o actualiza los usuarios de prueba del módulo de Talento Humano y asigna a cada usuario su cargo correspondiente.
+
+Entre los usuarios creados se encuentran:
+
+* Subgerente General.
+* Director de Operaciones.
+* Jefes de áreas.
+* Coordinadores.
+* Gerente Ejecutivo.
+* Gerente Financiero.
+* Jefe de Talento Humano.
+* Auxiliar de Talento Humano.
+* Otros cargos participantes en el flujo de aprobación.
+
+Este archivo debe ejecutarse después de:
+
+```bash
+npx tsx prisma/seed-humanTalent.ts
+```
+
+Si se ejecuta primero el archivo de usuarios, puede aparecer un error indicando que no se encontró uno de los cargos.
+
+---
+
+# 8 Iniciar el servidor
 
 ## Comando
 
@@ -191,11 +237,14 @@ Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
 ---
 
-# Scripts Disponibles
+# Scripts y comandos disponibles
 
-| Script | Descripción |
-|---|---|
-| npm run dev | Ejecuta el servidor en desarrollo |
-| npx prisma studio | Abre interfaz visual de Prisma |
-| npx prisma generate | Genera Prisma Client |
-| npx prisma migrate dev | Ejecuta migraciones |
+| Comando                                         | Descripción                                             |
+| ----------------------------------------------- | ------------------------------------------------------- |
+| `npm run dev`                                   | Ejecuta el servidor en modo de desarrollo               |
+| `npx prisma studio`                             | Abre la interfaz visual de Prisma                       |
+| `npx prisma generate`                           | Genera Prisma Client                                    |
+| `npx prisma migrate dev`                        | Ejecuta las migraciones en desarrollo                   |
+| `npx prisma db push`                            | Sincroniza el esquema directamente con la base de datos |
+| `npx tsx prisma/seed-humanTalent.ts`            | Carga la estructura organizacional de Talento Humano    |
+| `npx tsx prisma/seed-test-users-humanTalent.ts` | Carga los usuarios de prueba y asigna sus cargos        |

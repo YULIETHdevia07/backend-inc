@@ -725,9 +725,17 @@ export const getPersonnelRequisitionByIdService = async (
         throw new Error("La requisición no existe");
     }
 
+    const isHumanTalentAnalyst = await isActiveHumanTalentAnalyst(user.id);
+
+    const canViewAsHumanTalentAnalyst =
+        isHumanTalentAnalyst &&
+        requisition.status === "PENDIENTE_CONFIRMACION_TALENTO_HUMANO" &&
+        !requisition.hiringConfirmation;
+
     const canView =
         user.role === "ADMIN" ||
         requisition.createdById === user.id ||
+        canViewAsHumanTalentAnalyst ||
         requisition.approvals.some((approval) => {
             return (
                 approval.approverUserId === user.id ||
