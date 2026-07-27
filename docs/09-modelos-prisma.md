@@ -10,7 +10,7 @@ El sistema está dividido en dos módulos principales:
    - Gestión de solicitudes, mensajes, adjuntos, notificaciones y lectura de chats.
 
 2. **Módulo Talento Humano**
-   - Gestión de requisiciones de personal, estructura organizacional, cargos, asignaciones de usuarios a cargos, aprobaciones y confirmación de contratación.
+   - Gestión de requisiciones de personal, estructura organizacional, cargos, asignaciones de usuarios a cargos, aprobaciones, firmas de usuarios y confirmación de contratación.
 
 ---
 
@@ -40,6 +40,7 @@ Esto permite manejar:
 | email                               | String                                | Correo electrónico único del usuario                                  |
 | password                            | String                                | Contraseña encriptada del usuario                                     |
 | role                                | Role                                  | Rol general del sistema: USER, ADMIN o AGENT                          |
+| signatureUrl                        | String?                               | Ruta de la imagen de la firma registrada por el usuario               |
 | pqrsCreated                         | PQR[]                                 | PQR creadas por el usuario                                            |
 | pqrsAssigned                        | PQR[]                                 | PQR asignadas al usuario cuando actúa como agente                     |
 | pqrMessages                         | PqrMessage[]                          | Mensajes enviados por el usuario en chats de PQR                      |

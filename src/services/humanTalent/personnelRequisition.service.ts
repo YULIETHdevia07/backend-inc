@@ -75,6 +75,12 @@ export const createPersonnelRequisitionService = async ({
         throw new Error("El usuario que crea la requisición no existe");
     }
 
+    if (!user.signatureUrl) {
+        throw new Error(
+            "Debes tener una firma registrada para crear una requisición de personal"
+        );
+    }
+
     // Valida que el usuario tenga un cargo autorizado para crear requisiciones.
     await validatePersonnelRequisitionCreator(prisma, createdById);
 
@@ -296,45 +302,6 @@ export const createPersonnelRequisitionService = async ({
                         email: true,
                         role: true,
                         signatureUrl: true,
-                    },
-                },
-                approvals: {
-                    orderBy: {
-                        approvalOrder: "asc",
-                    },
-                    include: {
-                        department: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
-                        },
-                        approverPosition: {
-                            select: {
-                                id: true,
-                                code: true,
-                                name: true,
-                            },
-                        },
-                        approverUser: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                                signatureUrl: true,
-                            },
-                        },
-                        decidedBy: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                role: true,
-                                signatureUrl: true,
-                            },
-                        },
                     },
                 },
             },
@@ -836,7 +803,7 @@ export const decidePersonnelRequisitionService = async (
             currentRequisition.status === "RECHAZADA" ||
             currentRequisition.status === "CANCELADA"
         ) {
-            throw new Error("Esta requisición ya tiene un estado final");
+            throw new Error("No hay una aprobación pendiente para esta requisición");
         }
 
         const currentApproval = currentRequisition.approvals.find(
@@ -868,11 +835,11 @@ export const decidePersonnelRequisitionService = async (
             throw new Error("El usuario que toma la decisión no existe");
         }
 
-        // if (!approverUser.signatureUrl) {
-        //     throw new Error(
-        //         "Debes tener una firma registrada para aprobar, rechazar o cancelar una requisición"
-        //     );
-        // }
+        if (!approverUser.signatureUrl) {
+            throw new Error(
+                "Debes tener una firma registrada para aprobar, rechazar o cancelar una requisición"
+            );
+        }
 
         // Registra la decisión del paso actual.
         await tx.personnelRequisitionApproval.update({

@@ -3185,7 +3185,187 @@ AGENT
 
 ---
 
-# Obtener áreas activas de Talento Humano
+# Subir firma del usuario autenticado
+
+## Endpoint protegido
+
+```http
+PATCH /api/users/signature
+```
+
+## Descripción
+
+Endpoint privado encargado de registrar la firma del usuario autenticado.
+
+La firma se almacena como una imagen en el backend y la ruta del archivo queda guardada en el campo `signatureUrl` del usuario.
+
+Esta firma será utilizada en los formatos y detalles de requisición cuando el usuario apruebe, rechace o cancele un paso del flujo.
+
+---
+
+## Tipo de envío requerido
+
+Este endpoint no recibe datos en formato JSON.
+
+Debe enviarse mediante:
+
+```txt
+multipart/form-data
+```
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+---
+
+## Campo requerido
+
+| Campo     | Tipo | Obligatorio | Descripción                    |
+| --------- | ---- | ----------- | ------------------------------ |
+| signature | File | Sí          | Imagen de la firma del usuario |
+
+---
+
+## Archivos permitidos
+
+Formatos permitidos:
+
+```txt
+JPG
+JPEG
+PNG
+WEBP
+```
+
+Tipos MIME permitidos:
+
+```txt
+image/jpeg
+image/png
+image/webp
+```
+
+Tamaño máximo permitido:
+
+```txt
+2 MB
+```
+
+---
+
+## Ejemplo en Postman
+
+```txt
+Método: PATCH
+URL: http://localhost:4000/api/users/signature
+
+Headers:
+Authorization: Bearer TOKEN
+
+Body:
+form-data
+```
+
+| Key       | Type | Value     |
+| --------- | ---- | --------- |
+| signature | File | firma.png |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Firma registrada correctamente",
+  "user": {
+    "id": 1,
+    "name": "Juan Pérez",
+    "email": "juan@gmail.com",
+    "role": "USER",
+    "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+  }
+}
+```
+
+---
+
+## Respuesta si no se envía archivo
+
+```json
+{
+  "message": "Debes seleccionar una imagen para la firma"
+}
+```
+
+---
+
+## Respuesta si el usuario ya tiene firma registrada
+
+```json
+{
+  "message": "El usuario ya tiene una firma registrada"
+}
+```
+
+---
+
+## Respuesta si el usuario no existe
+
+```json
+{
+  "message": "El usuario no existe"
+}
+```
+
+---
+
+---
+
+## Respuesta si el archivo no es válido
+
+```json
+{
+  "message": "Solo se permiten imágenes JPG, PNG o WEBP"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al subir la firma"
+}
+```
+
+---
+
+# Obtener departamentos o áreas activas de Talento Humano
 
 ## Endpoint protegido
 
@@ -3195,9 +3375,17 @@ GET /api/human-talent/departments
 
 ## Descripción
 
-Endpoint privado encargado de obtener las áreas activas disponibles para crear una requisición de personal.
+Endpoint privado encargado de obtener los departamentos o áreas activas disponibles para crear una requisición de personal.
 
-Este endpoint permite cargar el listado de áreas solicitantes en el formulario de requisición.
+El resultado depende del usuario autenticado y de sus cargos activos dentro de la estructura organizacional.
+
+Reglas principales:
+
+* Si el usuario es `ADMIN`, puede consultar todas las áreas activas.
+* Si el usuario tiene un cargo responsable de un departamento, puede consultar ese departamento y sus áreas hijas.
+* Si el usuario no tiene cargos activos o no es responsable de ningún departamento, se devuelve un arreglo vacío.
+
+Este endpoint se utiliza para cargar el listado de los departamentos o áreas solicitantes en el formulario de requisición.
 
 ---
 
@@ -3226,16 +3414,29 @@ AGENT
   "message": "Áreas obtenidas correctamente",
   "departments": [
     {
-      "id": 1,
-      "code": "ORG-TH-0000",
-      "name": "Laboratorios Incobra S.A."
+      "id": 13,
+      "code": "GERENCIA_FINANCIERA",
+      "name": "Gerencia Financiera",
+      "parentDepartmentId": null
     },
     {
-      "id": 2,
-      "code": "ORG-TH-0005",
-      "name": "Talento Humano"
+      "id": 14,
+      "code": "CONTABILIDAD",
+      "name": "Contabilidad",
+      "parentDepartmentId": 13
     }
   ]
+}
+```
+
+---
+
+## Respuesta si no tiene áreas disponibles
+
+```json
+{
+  "message": "Áreas obtenidas correctamente",
+  "departments": []
 }
 ```
 
@@ -3245,7 +3446,7 @@ AGENT
 
 ```json
 {
-  "message": "Token no proporcionado"
+  "message": "Usuario no autenticado"
 }
 ```
 
@@ -3279,9 +3480,26 @@ AGENT
 GET /api/human-talent/position-profiles
 ```
 
+## Ejemplo con departamento seleccionado
+
+```http
+GET /api/human-talent/position-profiles?departmentId=13
+```
+
 ## Descripción
 
 Endpoint privado encargado de obtener los perfiles de cargo activos disponibles para una requisición de personal.
+
+Este endpoint recibe el parámetro `departmentId` por query param.
+
+Cuando se envía `departmentId`, el sistema consulta los cargos activos asociados a ese departamento y a sus áreas hijas, respetando los permisos del usuario autenticado.
+
+Reglas principales:
+
+* Si el usuario es `ADMIN`, puede consultar cargos de cualquier departamento activo.
+* Si el usuario no es `ADMIN`, solo puede consultar cargos de los departamentos donde sus cargos activos tengan responsabilidad.
+* Si no se envía `departmentId`, se devuelve un arreglo vacío.
+* Si el usuario no tiene permiso sobre el departamento seleccionado, se devuelve un arreglo vacío.
 
 ---
 
@@ -3303,6 +3521,14 @@ AGENT
 
 ---
 
+## Query params
+
+| Parámetro    | Tipo   | Obligatorio | Descripción                                      |
+| ------------ | ------ | ----------- | ------------------------------------------------ |
+| departmentId | number | Sí          | Identificador del departamento o área consultada |
+
+---
+
 ## Respuesta exitosa
 
 ```json
@@ -3310,16 +3536,50 @@ AGENT
   "message": "Perfiles de cargo obtenidos correctamente",
   "positionProfiles": [
     {
-      "id": 1,
-      "code": "DPC-TH-0003",
-      "name": "Jefe de Talento Humano"
+      "id": 13,
+      "code": "GERENTE_FINANCIERO",
+      "name": "Gerente Financiero",
+      "homeDepartmentId": 13
     },
     {
-      "id": 2,
-      "code": "DPC-TH-0008",
-      "name": "Jefe de Producción"
+      "id": 14,
+      "code": "JEFE_CONTABILIDAD",
+      "name": "Jefe de Contabilidad",
+      "homeDepartmentId": 14
     }
   ]
+}
+```
+
+---
+
+## Respuesta si no se envía departamento
+
+```json
+{
+  "message": "Perfiles de cargo obtenidos correctamente",
+  "positionProfiles": []
+}
+```
+
+---
+
+## Respuesta si el id del departamento no es válido
+
+```json
+{
+  "message": "El id del departamento no es válido"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permisos sobre el departamento
+
+```json
+{
+  "message": "Perfiles de cargo obtenidos correctamente",
+  "positionProfiles": []
 }
 ```
 
@@ -3329,7 +3589,7 @@ AGENT
 
 ```json
 {
-  "message": "Token no proporcionado"
+  "message": "Usuario no autenticado"
 }
 ```
 
@@ -3367,13 +3627,17 @@ POST /api/human-talent/requisitions
 
 Endpoint privado encargado de crear una nueva requisición de personal desde el módulo de Talento Humano.
 
-Al crear la requisición, el sistema registra automáticamente:
+Al crear una requisición, el sistema:
 
-* Fecha de solicitud.
-* Estado inicial `PENDIENTE`.
-* Usuario que creó la requisición.
-* Fecha de creación.
-* Fecha de actualización.
+* Valida que el usuario esté autenticado.
+* Valida que el usuario tenga un cargo autorizado para crear requisiciones.
+* Valida que el área, cargo y ciudad existan y estén activos.
+* Valida las reglas de contratación.
+* Registra la requisición.
+* Genera automáticamente el flujo de aprobación según la jerarquía del área seleccionada.
+* Asigna el paso actual de aprobación.
+* Envía la notificación al primer aprobador correspondiente.
+* Si el creador hace parte del flujo, se ajustan los pasos según la jerarquía configurada.
 
 ---
 
@@ -3389,9 +3653,7 @@ Content-Type: application/json
 ## Acceso permitido
 
 ```txt
-USER
-ADMIN
-AGENT
+ADMIN y Usuarios autenticados con cargos autorizados para crear requisiciones.
 ```
 
 ---
@@ -3400,8 +3662,8 @@ AGENT
 
 ```json
 {
-  "departmentId": 1,
-  "positionId": 1,
+  "departmentId": 14,
+  "positionId": 14,
   "reason": "CARGO_NUEVO",
   "otherReason": null,
   "cityId": 1,
@@ -3417,18 +3679,18 @@ AGENT
 
 ## Campos del body
 
-| Campo | Tipo | Obligatorio | Descripción |
-| ----- | ---- | ----------- | ----------- |
-| departmentId | number | Sí | Identificador del área solicitante |
-| positionId | number | Sí | Identificador del cargo requerido |
-| reason | string | Sí | Motivo de la requisición |
-| otherReason | string/null | No | Descripción adicional cuando el motivo es `OTROS` |
-| cityId | number | Sí | Identificador de la ciudad |
-| contractType | string | Sí | Tipo principal de contratación |
-| directContractType | string/null | No | Tipo de contrato directo cuando `contractType` es `DIRECTO` |
-| contractDurationMonths | number/null | No | Duración del contrato en meses cuando aplica |
-| internContractType | string/null | No | Tipo de practicante cuando `contractType` es `PRACTICANTE` |
-| proposedSalary | number | Sí | Salario propuesto para el cargo |
+| Campo                  | Tipo        | Obligatorio | Descripción                                               |
+| ---------------------- | ----------- | ----------- | --------------------------------------------------------- |
+| departmentId           | number      | Sí          | Identificador del área solicitante                        |
+| positionId             | number      | Sí          | Identificador del cargo requerido                         |
+| reason                 | string      | Sí          | Motivo de la requisición                                  |
+| otherReason            | string/null | No          | Descripción adicional cuando el motivo es `OTROS`         |
+| cityId                 | number      | Sí          | Identificador de la ciudad                                |
+| contractType           | string      | Sí          | Tipo principal de contratación                            |
+| directContractType     | string/null | No          | Tipo de contrato directo cuando `contractType` es DIRECTO |
+| contractDurationMonths | number/null | No          | Duración del contrato en meses cuando aplica              |
+| internContractType     | string/null | No          | Tipo de practicante cuando `contractType` es PRACTICANTE  |
+| proposedSalary         | number      | Sí          | Salario propuesto para el cargo                           |
 
 ---
 
@@ -3475,7 +3737,7 @@ ROTANTE
 
 ## Reglas de contratación
 
-### Contrato directo indefinido 
+### Contrato directo indefinido
 
 Cuando `contractType` es `DIRECTO` y `directContractType` es `INDEFINIDO`, no se requiere duración en meses.
 
@@ -3543,8 +3805,8 @@ Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
   "requisition": {
     "id": 1,
     "requestDate": "2026-06-25T00:00:00.000Z",
-    "departmentId": 1,
-    "positionId": 1,
+    "departmentId": 14,
+    "positionId": 14,
     "reason": "CARGO_NUEVO",
     "otherReason": null,
     "cityId": 1,
@@ -3553,19 +3815,19 @@ Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
     "contractDurationMonths": 12,
     "internContractType": null,
     "proposedSalary": "2500000",
-    "status": "PENDIENTE",
+    "status": "EN_APROBACION",
     "createdById": 1,
     "createdAt": "2026-06-25T00:00:00.000Z",
     "updatedAt": "2026-06-25T00:00:00.000Z",
     "department": {
-      "id": 1,
-      "code": "ORG-TH-0000",
-      "name": "Laboratorios Incobra S.A."
+      "id": 14,
+      "code": "CONTABILIDAD",
+      "name": "Contabilidad"
     },
     "position": {
-      "id": 1,
-      "code": "DPC-TH-0003",
-      "name": "Jefe de Talento Humano"
+      "id": 14,
+      "code": "JEFE_CONTABILIDAD",
+      "name": "Jefe de Contabilidad"
     },
     "city": {
       "id": 1,
@@ -3573,11 +3835,31 @@ Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
     },
     "createdBy": {
       "id": 1,
-      "name": "Juan",
+      "name": "Juan Pérez",
       "email": "juan@gmail.com",
       "role": "USER"
     }
   }
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permiso para crear requisiciones
+
+```json
+{
+  "message": "No tienes un cargo autorizado para crear requisiciones de personal"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene firma registrada
+
+```json
+{
+  "message": "Debes tener una firma registrada para crear una requisición de personal"
 }
 ```
 
@@ -3630,6 +3912,16 @@ Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
     "TEMPORAL",
     "PRACTICANTE"
   ]
+}
+```
+
+---
+
+## Respuesta si falta tipo de contrato directo
+
+```json
+{
+  "message": "Debe seleccionar el tipo de contrato directo"
 }
 ```
 
@@ -3764,9 +4056,17 @@ GET /api/human-talent/requisitions
 
 ## Descripción
 
-Endpoint privado encargado de obtener el listado de requisiciones de personal registradas en el sistema.
+Endpoint privado encargado de obtener el listado de requisiciones de personal visibles para el usuario autenticado.
 
 Las requisiciones se devuelven ordenadas desde la más reciente hasta la más antigua.
+
+Reglas principales:
+
+* `ADMIN` puede ver todas las requisiciones.
+* El usuario creador puede ver sus propias requisiciones.
+* Los usuarios aprobadores pueden ver las requisiciones donde participan o participaron.
+* El Analista de Talento Humano puede ver requisiciones en estado `PENDIENTE_CONFIRMACION_TALENTO_HUMANO` que aún no tienen confirmación creada.
+* El Jefe de Talento Humano puede ver las requisiciones de personal confirmadas asignadas dentro del flujo de Talento Humano.
 
 ---
 
@@ -3786,6 +4086,8 @@ ADMIN
 AGENT
 ```
 
+El acceso real depende de la relación del usuario con la requisición o con el flujo de aprobación.
+
 ---
 
 ## Respuesta exitosa
@@ -3797,8 +4099,8 @@ AGENT
     {
       "id": 1,
       "requestDate": "2026-06-25T00:00:00.000Z",
-      "departmentId": 1,
-      "positionId": 1,
+      "departmentId": 14,
+      "positionId": 14,
       "reason": "CARGO_NUEVO",
       "otherReason": null,
       "cityId": 1,
@@ -3807,19 +4109,19 @@ AGENT
       "contractDurationMonths": 12,
       "internContractType": null,
       "proposedSalary": "2500000",
-      "status": "PENDIENTE",
+      "status": "EN_APROBACION",
       "createdById": 1,
       "createdAt": "2026-06-25T00:00:00.000Z",
       "updatedAt": "2026-06-25T00:00:00.000Z",
       "department": {
-        "id": 1,
-        "code": "ORG-TH-0000",
-        "name": "Laboratorios Incobra S.A."
+        "id": 14,
+        "code": "CONTABILIDAD",
+        "name": "Contabilidad"
       },
       "position": {
-        "id": 1,
-        "code": "DPC-TH-0003",
-        "name": "Jefe de Talento Humano"
+        "id": 14,
+        "code": "JEFE_CONTABILIDAD",
+        "name": "Jefe de Contabilidad"
       },
       "city": {
         "id": 1,
@@ -3827,9 +4129,10 @@ AGENT
       },
       "createdBy": {
         "id": 1,
-        "name": "Juan",
+        "name": "Juan Pérez",
         "email": "juan@gmail.com",
-        "role": "USER"
+        "role": "USER",
+        "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
       }
     }
   ]
@@ -3838,7 +4141,7 @@ AGENT
 
 ---
 
-## Respuesta si no existen requisiciones
+## Respuesta si no existen requisiciones visibles
 
 ```json
 {
@@ -3879,41 +4182,1548 @@ AGENT
 
 ---
 
+# Obtener detalle de requisición de personal
+
+## Endpoint protegido
+
+```http
+GET /api/human-talent/requisitions/:id
+```
+
+## Ejemplo
+
+```http
+GET /api/human-talent/requisitions/1
+```
+
+## Descripción
+
+Endpoint privado encargado de obtener el detalle completo de una requisición de personal.
+
+Este endpoint devuelve la información completa de la requisición, incluyendo sus relaciones principales y los datos necesarios para visualizar el detalle o generar el formato imprimible.
+
+Este endpoint devuelve:
+
+* Información general de la requisición.
+* Departamento o área solicitante.
+* Cargo requerido.
+* Ciudad de labores.
+* Usuario creador.
+* Aprobaciones jerárquicas.
+* Cargo aprobador de cada paso.
+* Usuario asignado para aprobar.
+* Usuario que tomó la decisión.
+* Firma del usuario que actuó, cuando aplica.
+* Confirmación de contratación, si existe.
+* Aprobaciones de Talento Humano, si existen.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+```
+
+---
+
+## Acceso permitido
+
+```txt
+USER
+ADMIN
+AGENT
+```
+
+El acceso real depende de la relación del usuario autenticado con la requisición.
+
+Puede consultar el detalle:
+
+* El `ADMIN`.
+* El usuario que creó la requisición.
+* Un usuario que participe o haya participado como aprobador.
+* El Analista de Talento Humano cuando la requisición esté pendiente de confirmación.
+* Un usuario que participe o haya participado en la confirmación de Talento Humano.
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                 |
+| --------- | ------ | ------------------------------------------- |
+| id        | number | Identificador de la requisición de personal |
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "requisition": {
+    "id": 1,
+    "requestDate": "2026-06-25T00:00:00.000Z",
+    "departmentId": 14,
+    "positionId": 14,
+    "reason": "CARGO_NUEVO",
+    "otherReason": null,
+    "cityId": 1,
+    "contractType": "DIRECTO",
+    "directContractType": "FIJO",
+    "contractDurationMonths": 12,
+    "internContractType": null,
+    "proposedSalary": "2500000",
+    "status": "EN_APROBACION",
+    "createdById": 1,
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "updatedAt": "2026-06-25T00:00:00.000Z",
+    "department": {
+      "id": 14,
+      "code": "CONTABILIDAD",
+      "name": "Contabilidad"
+    },
+    "position": {
+      "id": 14,
+      "code": "JEFE_CONTABILIDAD",
+      "name": "Jefe de Contabilidad"
+    },
+    "city": {
+      "id": 1,
+      "name": "Barranquilla"
+    },
+    "createdBy": {
+      "id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@gmail.com",
+      "role": "USER",
+      "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+    },
+    "approvals": [
+      {
+        "id": 1,
+        "requisitionId": 1,
+        "approvalOrder": 1,
+        "departmentId": 14,
+        "approverPositionId": 14,
+        "approverAssignmentId": 1,
+        "approverUserId": 2,
+        "decision": "APROBADA",
+        "decidedById": 2,
+        "assignedAt": "2026-06-25T00:00:00.000Z",
+        "decidedAt": "2026-06-25T00:00:00.000Z",
+        "comment": "Aprobado",
+        "isCurrent": false,
+        "department": {
+          "id": 14,
+          "code": "CONTABILIDAD",
+          "name": "Contabilidad"
+        },
+        "approverPosition": {
+          "id": 14,
+          "code": "JEFE_CONTABILIDAD",
+          "name": "Jefe de Contabilidad"
+        },
+        "approverUser": {
+          "id": 2,
+          "name": "Usuario Jefe de Contabilidad",
+          "email": "jefe.contabilidad@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        },
+        "decidedBy": {
+          "id": 2,
+          "name": "Usuario Jefe de Contabilidad",
+          "email": "jefe.contabilidad@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        }
+      }
+    ],
+    "hiringConfirmation": null
+  }
+}
+```
+
+---
+
+## Nota sobre firmas
+
+Aunque la respuesta puede incluir `approverUser.signatureUrl`, la firma solo debe mostrarse cuando exista `decidedBy`.
+
+Esto evita mostrar una firma antes de que el usuario haya aprobado, rechazado o cancelado el paso.
+
+---
+
+## Respuesta si el id no es válido
+
+```json
+{
+  "message": "El id de la requisición no es válido"
+}
+```
+
+---
+
+## Respuesta si la requisición no existe
+
+```json
+{
+  "message": "La requisición no existe"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permiso para verla
+
+```json
+{
+  "message": "No tienes permisos para ver esta requisición"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al obtener el detalle de la requisición"
+}
+```
+
+---
+
+# Aprobar, rechazar o cancelar una requisición de personal
+
+## Endpoint protegido
+
+```http
+PATCH /api/human-talent/requisitions/:id/decision
+```
+
+## Ejemplo
+
+```http
+PATCH /api/human-talent/requisitions/1/decision
+```
+
+## Descripción
+
+Endpoint privado encargado de aprobar, rechazar o cancelar el paso actual de aprobación de una requisición de personal.
+
+Solo puede tomar la decisión el usuario asignado al paso actual, según las reglas del sistema.
+
+Antes de registrar la decisión, el sistema valida que el usuario tenga una firma registrada.
+
+Cuando el paso es aprobado, el sistema activa el siguiente paso del flujo de aprobación.
+
+Si ya no existen más aprobaciones jerárquicas, la requisición pasa al estado:
+
+```txt
+PENDIENTE_CONFIRMACION_TALENTO_HUMANO
+```
+
+Cuando la requisición es rechazada o cancelada, el flujo termina y el estado de la requisición cambia según la decisión tomada.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+```txt
+Usuario asignado al paso actual de aprobación.
+```
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                 |
+| --------- | ------ | ------------------------------------------- |
+| id        | number | Identificador de la requisición de personal |
+
+---
+
+## Body para aprobar
+
+```json
+{
+  "decision": "APROBADA",
+  "comment": "Aprobado correctamente"
+}
+```
+
+---
+
+## Body para rechazar
+
+```json
+{
+  "decision": "RECHAZADA",
+  "comment": "No se aprueba la solicitud porque falta información."
+}
+```
+
+---
+
+## Body para cancelar
+
+```json
+{
+  "decision": "CANCELADA",
+  "comment": "La requisición fue cancelada por decisión administrativa."
+}
+```
+
+---
+
+## Campos del body
+
+| Campo    | Tipo        | Obligatorio | Descripción                                             |
+| -------- | ----------- | ----------- | ------------------------------------------------------- |
+| decision | string      | Sí          | Decisión tomada sobre el paso                           |
+| comment  | string/null | No          | Comentario opcional cuando se aprueba                   |
+| comment  | string      | Sí          | Obligatorio cuando la decisión es RECHAZADA o CANCELADA |
+
+---
+
+## Decisiones permitidas
+
+```txt
+APROBADA
+RECHAZADA
+CANCELADA
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Decisión registrada correctamente",
+  "approval": {
+    "id": 1,
+    "requestDate": "2026-06-25T00:00:00.000Z",
+    "departmentId": 14,
+    "positionId": 14,
+    "reason": "CARGO_NUEVO",
+    "otherReason": null,
+    "cityId": 1,
+    "contractType": "DIRECTO",
+    "directContractType": "FIJO",
+    "contractDurationMonths": 12,
+    "internContractType": null,
+    "proposedSalary": "2500000",
+    "status": "EN_APROBACION",
+    "createdById": 1,
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "updatedAt": "2026-06-25T00:00:00.000Z",
+    "department": {
+      "id": 14,
+      "code": "CONTABILIDAD",
+      "name": "Contabilidad"
+    },
+    "position": {
+      "id": 14,
+      "code": "JEFE_CONTABILIDAD",
+      "name": "Jefe de Contabilidad"
+    },
+    "city": {
+      "id": 1,
+      "name": "Barranquilla"
+    },
+    "createdBy": {
+      "id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@gmail.com",
+      "role": "USER",
+      "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+    },
+    "approvals": [
+      {
+        "id": 1,
+        "requisitionId": 1,
+        "approvalOrder": 1,
+        "departmentId": 14,
+        "approverPositionId": 14,
+        "approverUserId": 2,
+        "decision": "APROBADA",
+        "decidedById": 2,
+        "assignedAt": "2026-06-25T00:00:00.000Z",
+        "decidedAt": "2026-06-25T00:00:00.000Z",
+        "comment": "Aprobado correctamente",
+        "isCurrent": false,
+        "department": {
+          "id": 14,
+          "code": "CONTABILIDAD",
+          "name": "Contabilidad"
+        },
+        "approverPosition": {
+          "id": 14,
+          "code": "JEFE_CONTABILIDAD",
+          "name": "Jefe de Contabilidad"
+        },
+        "approverUser": {
+          "id": 2,
+          "name": "Usuario Jefe de Contabilidad",
+          "email": "jefe.contabilidad@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        },
+        "decidedBy": {
+          "id": 2,
+          "name": "Usuario Jefe de Contabilidad",
+          "email": "jefe.contabilidad@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Respuesta si la requisición no es válida
+
+```json
+{
+  "message": "La requisición no es válida"
+}
+```
+
+---
+
+## Respuesta si no se envía la decisión
+
+```json
+{
+  "message": "La decisión es obligatoria"
+}
+```
+
+---
+
+## Respuesta si la decisión no es válida
+
+```json
+{
+  "message": "Decisión no válida",
+  "allowedDecisions": [
+    "APROBADA",
+    "RECHAZADA",
+    "CANCELADA"
+  ]
+}
+```
+
+---
+
+## Respuesta si se rechaza o cancela sin comentario
+
+```json
+{
+  "message": "Debe ingresar un comentario para rechazar o cancelar"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene firma registrada
+
+```json
+{
+  "message": "Debes tener una firma registrada para aprobar, rechazar o cancelar una requisición"
+}
+```
+
+---
+
+## Respuesta si la requisición no existe
+
+```json
+{
+  "message": "La requisición no existe"
+}
+```
+
+---
+
+## Respuesta si no hay aprobación pendiente
+
+```json
+{
+  "message": "No hay una aprobación pendiente para esta requisición"
+}
+```
+
+---
+
+## Respuesta si la requisición no tiene paso activo
+
+```json
+{
+  "message": "La requisición no tiene un paso activo para decidir"
+}
+```
+
+---
+
+## Respuesta si el usuario no puede decidir
+
+```json
+{
+  "message": "No tienes permisos para decidir esta requisición"
+}
+```
+
+---
+
+## Respuesta si el usuario intenta decidir por otro usuario
+
+```json
+{
+  "message": "No puedes decidir una requisición por otro usuario"
+}
+```
+
+---
+
+## Respuesta si el usuario que toma la decisión no existe
+
+```json
+{
+  "message": "El usuario que toma la decisión no existe"
+}
+```
+
+---
+
+## Respuesta si el siguiente paso no tiene usuario aprobador
+
+```json
+{
+  "message": "El siguiente paso no tiene un usuario aprobador asignado"
+}
+```
+
+---
+
+## Respuesta si no existe configuración activa de Talento Humano
+
+```json
+{
+  "message": "No existe una configuración activa del flujo de Talento Humano"
+}
+```
+
+---
+
+## Respuesta si no existe usuario activo para el primer VoBo de Talento Humano
+
+```json
+{
+  "message": "No existe un usuario activo asignado al primer VoBo de Talento Humano"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al registrar la decisión de la requisición"
+}
+```
+
+---
+
+# Crear confirmación de contratación
+
+## Endpoint protegido
+
+```http
+POST /api/human-talent/requisitions/:id/hiring-confirmation
+```
+
+## Ejemplo
+
+```http
+POST /api/human-talent/requisitions/1/hiring-confirmation
+```
+
+## Descripción
+
+Endpoint privado encargado de registrar la confirmación final de contratación de una requisición.
+
+Este endpoint se utiliza cuando la requisición ya fue aprobada por la jerarquía organizacional y se encuentra en estado:
+
+```txt
+PENDIENTE_CONFIRMACION_TALENTO_HUMANO
+```
+
+Al crear la confirmación, el sistema:
+
+* Valida que el usuario esté autenticado.
+* Valida que la requisición exista.
+* Valida que la requisición esté lista para confirmación de Talento Humano.
+* Valida que la requisición no tenga una confirmación registrada previamente.
+* Valida que el usuario autenticado sea el asignado al primer VoBo de Talento Humano.
+* Valida que el usuario tenga una firma registrada.
+* Valida las reglas del tipo de contratación aprobado.
+* Registra los datos finales de contratación.
+* Crea el flujo de aprobación de Talento Humano según la configuración activa.
+* Marca automáticamente como aprobado el primer VoBo cuando corresponde al usuario que registra la confirmación.
+* Notifica al siguiente aprobador de Talento Humano.
+* Cambia el estado de la requisición a `PENDIENTE_APROBACION_TALENTO_HUMANO`.
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+```txt
+Usuario autenticado asignado al primer VoBo de Talento Humano.
+```
+
+En la configuración inicial, este cargo corresponde al Auxiliar de Talento Humano.
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                 |
+| --------- | ------ | ------------------------------------------- |
+| id        | number | Identificador de la requisición de personal |
+
+---
+
+## Body
+
+```json
+{
+  "contractType": "DIRECTO",
+  "directContractType": "FIJO",
+  "contractDurationMonths": 12,
+  "internContractType": null,
+  "approvedSalary": 2600000
+}
+```
+
+---
+
+## Campos del body
+
+| Campo                  | Tipo        | Obligatorio | Descripción                                                    |
+| ---------------------- | ----------- | ----------- | -------------------------------------------------------------- |
+| contractType           | string      | Sí          | Tipo principal de contratación aprobado                        |
+| directContractType     | string/null | No          | Tipo de contrato directo aprobado cuando aplica                |
+| contractDurationMonths | number/null | No          | Duración del contrato en meses cuando aplica                   |
+| internContractType     | string/null | No          | Tipo de practicante cuando el contrato aprobado es practicante |
+| approvedSalary         | number      | Sí          | Salario aprobado por Talento Humano                            |
+
+---
+
+## Tipos de contratación permitidos
+
+```txt
+DIRECTO
+TEMPORAL
+PRACTICANTE
+```
+
+---
+
+## Tipos de contrato directo permitidos
+
+```txt
+INDEFINIDO
+FIJO
+```
+
+---
+
+## Tipos de practicante permitidos
+
+```txt
+APRENDIZ
+PASANTE
+ROTANTE
+```
+
+---
+
+## Reglas de contratación
+
+### Contrato directo indefinido
+
+Cuando `contractType` es `DIRECTO` y `directContractType` es `INDEFINIDO`, no se requiere duración en meses.
+
+```json
+{
+  "contractType": "DIRECTO",
+  "directContractType": "INDEFINIDO",
+  "contractDurationMonths": null,
+  "internContractType": null
+}
+```
+
+---
+
+### Contrato directo fijo
+
+Cuando `contractType` es `DIRECTO` y `directContractType` es `FIJO`, se debe enviar la duración en meses.
+
+```json
+{
+  "contractType": "DIRECTO",
+  "directContractType": "FIJO",
+  "contractDurationMonths": 12,
+  "internContractType": null
+}
+```
+
+---
+
+### Contrato temporal
+
+Cuando `contractType` es `TEMPORAL`, se debe enviar la duración en meses.
+
+```json
+{
+  "contractType": "TEMPORAL",
+  "directContractType": null,
+  "contractDurationMonths": 6,
+  "internContractType": null
+}
+```
+
+---
+
+### Practicante
+
+Cuando `contractType` es `PRACTICANTE`, se debe enviar el tipo de practicante.
+
+```json
+{
+  "contractType": "PRACTICANTE",
+  "directContractType": null,
+  "contractDurationMonths": null,
+  "internContractType": "APRENDIZ"
+}
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Confirmación de contratación registrada correctamente",
+  "hiringConfirmation": {
+    "id": 1,
+    "requisitionId": 1,
+    "contractType": "DIRECTO",
+    "directContractType": "FIJO",
+    "contractDurationMonths": 12,
+    "internContractType": null,
+    "approvedSalary": "2600000",
+    "status": "PENDIENTE_APROBACION",
+    "createdById": 8,
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "updatedAt": "2026-06-25T00:00:00.000Z",
+    "requisition": {
+      "id": 1,
+      "department": {
+        "id": 14,
+        "code": "CONTABILIDAD",
+        "name": "Contabilidad"
+      },
+      "position": {
+        "id": 14,
+        "code": "JEFE_CONTABILIDAD",
+        "name": "Jefe de Contabilidad"
+      },
+      "city": {
+        "id": 1,
+        "name": "Barranquilla"
+      }
+    },
+    "createdBy": {
+      "id": 8,
+      "name": "Usuario Talento Humano",
+      "email": "talento.humano@gmail.com",
+      "role": "USER",
+      "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+    },
+    "approvals": [
+      {
+        "id": 1,
+        "approvalOrder": 1,
+        "approverPositionId": 1,
+        "approverUserId": 8,
+        "decision": "APROBADA",
+        "decidedById": 8,
+        "decidedAt": "2026-06-25T00:00:00.000Z",
+        "isCurrent": false,
+        "approverPosition": {
+          "id": 1,
+          "code": "DPC-TH-0080",
+          "name": "Auxiliar de Talento Humano"
+        },
+        "approverUser": {
+          "id": 8,
+          "name": "Usuario Talento Humano",
+          "email": "talento.humano@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+        },
+        "decidedBy": {
+          "id": 8,
+          "name": "Usuario Talento Humano",
+          "email": "talento.humano@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+        }
+      },
+      {
+        "id": 2,
+        "approvalOrder": 2,
+        "approverPositionId": 2,
+        "approverUserId": 9,
+        "decision": null,
+        "decidedById": null,
+        "decidedAt": null,
+        "isCurrent": true,
+        "approverPosition": {
+          "id": 2,
+          "code": "DPC-TH-0003",
+          "name": "Jefe de Talento Humano"
+        },
+        "approverUser": {
+          "id": 9,
+          "name": "Jefe Talento Humano",
+          "email": "jefe.th@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        },
+        "decidedBy": null
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Respuesta si la requisición no es válida
+
+```json
+{
+  "message": "La requisición no es válida"
+}
+```
+
+---
+
+## Respuesta si faltan campos obligatorios
+
+```json
+{
+  "message": "Todos los campos obligatorios deben ser enviados"
+}
+```
+
+---
+
+## Respuesta si el tipo de contratación no es válido
+
+```json
+{
+  "message": "Tipo de contratación no válido",
+  "allowedContractTypes": [
+    "DIRECTO",
+    "TEMPORAL",
+    "PRACTICANTE"
+  ]
+}
+```
+
+---
+
+## Respuesta si el tipo de contrato directo no es válido
+
+```json
+{
+  "message": "Tipo de contrato directo no válido",
+  "allowedDirectContractTypes": [
+    "INDEFINIDO",
+    "FIJO"
+  ]
+}
+```
+
+---
+
+## Respuesta si el tipo de practicante no es válido
+
+```json
+{
+  "message": "Tipo de practicante no válido",
+  "allowedInternContractTypes": [
+    "APRENDIZ",
+    "PASANTE",
+    "ROTANTE"
+  ]
+}
+```
+
+---
+
+## Respuesta si falta tipo de contrato directo
+
+```json
+{
+  "message": "Debe seleccionar el tipo de contrato directo"
+}
+```
+
+---
+
+## Respuesta si falta duración para contrato fijo
+
+```json
+{
+  "message": "Debe indicar la duración del contrato fijo en meses"
+}
+```
+
+---
+
+## Respuesta si falta duración para contrato temporal
+
+```json
+{
+  "message": "Debe indicar la duración del contrato temporal en meses"
+}
+```
+
+---
+
+## Respuesta si falta tipo de practicante
+
+```json
+{
+  "message": "Debe seleccionar el tipo de practicante"
+}
+```
+
+---
+
+## Respuesta si el salario aprobado no es válido
+
+```json
+{
+  "message": "El salario aprobado debe ser mayor a cero"
+}
+```
+
+---
+
+## Respuesta si la requisición no existe
+
+```json
+{
+  "message": "La requisición de personal no existe"
+}
+```
+
+---
+
+## Respuesta si la requisición ya tiene confirmación
+
+```json
+{
+  "message": "Esta requisición ya tiene una confirmación de contratación"
+}
+```
+
+---
+
+## Respuesta si la requisición no está lista para confirmación
+
+```json
+{
+  "message": "La requisición todavía no está lista para confirmación de Talento Humano"
+}
+```
+
+---
+
+## Respuesta si el usuario que confirma no existe
+
+```json
+{
+  "message": "El usuario que confirma la contratación no existe"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene firma registrada
+
+```json
+{
+  "message": "Debes tener una firma registrada para crear la confirmación de contratación"
+}
+```
+
+---
+
+## Respuesta si el usuario no está asignado al primer VoBo de Talento Humano
+
+```json
+{
+  "message": "Solo el usuario asignado al primer VoBo de Talento Humano puede registrar la confirmación"
+}
+```
+
+---
+
+## Respuesta si no existe configuración activa de Talento Humano
+
+```json
+{
+  "message": "No existe una configuración activa del flujo de Talento Humano."
+}
+```
+
+---
+
+## Respuesta si no existe usuario activo en el flujo de Talento Humano
+
+```json
+{
+  "message": "No existe un usuario activo asignado a uno de los cargos del flujo de Talento Humano."
+}
+```
+
+---
+
+## Respuesta si no se encuentra paso pendiente para aprobar la confirmación
+
+```json
+{
+  "message": "No se encontró un paso pendiente para aprobar la confirmación de contratación"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al registrar la confirmación de contratación"
+}
+```
+
+---
+
+# Aprobar, rechazar o cancelar confirmación de contratación
+
+## Endpoint protegido
+
+```http
+PATCH /api/human-talent/hiring-confirmations/:id/decision
+```
+
+## Ejemplo
+
+```http
+PATCH /api/human-talent/hiring-confirmations/1/decision
+```
+
+## Descripción
+
+Endpoint privado encargado de aprobar, rechazar o cancelar la confirmación final de contratación de una requisición.
+
+Solo puede tomar la decisión el usuario asignado al paso actual del flujo de aprobación de Talento Humano.
+
+Antes de registrar la decisión, el sistema valida que el usuario tenga una firma registrada.
+
+Cuando un paso es aprobado, el sistema activa el siguiente paso del flujo de Talento Humano.
+
+Si ya no existen más pasos pendientes, la confirmación de contratación y la requisición pasan a estado:
+
+```txt
+APROBADA
+```
+
+Cuando la confirmación es rechazada o cancelada, tanto la confirmación como la requisición cambian al estado correspondiente:
+
+```txt
+RECHAZADA
+CANCELADA
+```
+
+---
+
+## Header requerido
+
+```http
+Authorization: Bearer TOKEN
+Content-Type: application/json
+```
+
+---
+
+## Acceso permitido
+
+```txt
+Usuario asignado al paso actual de aprobación de Talento Humano.
+```
+
+---
+
+## Parámetros
+
+| Parámetro | Tipo   | Descripción                                      |
+| --------- | ------ | ------------------------------------------------ |
+| id        | number | Identificador de la confirmación de contratación |
+
+---
+
+## Body para aprobar
+
+```json
+{
+  "decision": "APROBADA",
+  "comment": "Confirmación aprobada"
+}
+```
+
+---
+
+## Body para rechazar
+
+```json
+{
+  "decision": "RECHAZADA",
+  "comment": "No se aprueba la confirmación por inconsistencias en la información."
+}
+```
+
+---
+
+## Body para cancelar
+
+```json
+{
+  "decision": "CANCELADA",
+  "comment": "La confirmación fue cancelada por decisión administrativa."
+}
+```
+
+---
+
+## Campos del body
+
+| Campo    | Tipo        | Obligatorio | Descripción                                                 |
+| -------- | ----------- | ----------- | ----------------------------------------------------------- |
+| decision | string      | Sí          | Decisión tomada sobre la confirmación                       |
+| comment  | string/null | No          | Comentario opcional cuando la decisión es `APROBADA`        |
+| comment  | string      | Sí          | Obligatorio cuando la decisión es `RECHAZADA` o `CANCELADA` |
+
+---
+
+## Decisiones permitidas
+
+```txt
+APROBADA
+RECHAZADA
+CANCELADA
+```
+
+---
+
+## Respuesta exitosa
+
+```json
+{
+  "message": "Decisión de Talento Humano registrada correctamente",
+  "approval": {
+    "id": 1,
+    "requisitionId": 1,
+    "contractType": "DIRECTO",
+    "directContractType": "FIJO",
+    "contractDurationMonths": 12,
+    "internContractType": null,
+    "approvedSalary": "2600000",
+    "status": "APROBADA",
+    "createdById": 8,
+    "createdAt": "2026-06-25T00:00:00.000Z",
+    "updatedAt": "2026-06-25T00:00:00.000Z",
+    "requisition": {
+      "id": 1,
+      "department": {
+        "id": 14,
+        "code": "CONTABILIDAD",
+        "name": "Contabilidad"
+      },
+      "position": {
+        "id": 14,
+        "code": "JEFE_CONTABILIDAD",
+        "name": "Jefe de Contabilidad"
+      },
+      "city": {
+        "id": 1,
+        "name": "Barranquilla"
+      }
+    },
+    "createdBy": {
+      "id": 8,
+      "name": "Usuario Talento Humano",
+      "email": "talento.humano@gmail.com",
+      "role": "USER",
+      "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+    },
+    "approvals": [
+      {
+        "id": 1,
+        "hiringConfirmationId": 1,
+        "approvalOrder": 1,
+        "approverPositionId": 1,
+        "approverAssignmentId": 1,
+        "approverUserId": 8,
+        "decision": "APROBADA",
+        "decidedById": 8,
+        "decidedAt": "2026-06-25T00:00:00.000Z",
+        "comment": null,
+        "isCurrent": false,
+        "approverPosition": {
+          "id": 1,
+          "code": "DPC-TH-0080",
+          "name": "Auxiliar de Talento Humano"
+        },
+        "approverUser": {
+          "id": 8,
+          "name": "Usuario Talento Humano",
+          "email": "talento.humano@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+        },
+        "decidedBy": {
+          "id": 8,
+          "name": "Usuario Talento Humano",
+          "email": "talento.humano@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884091.png"
+        }
+      },
+      {
+        "id": 2,
+        "hiringConfirmationId": 1,
+        "approvalOrder": 2,
+        "approverPositionId": 2,
+        "approverAssignmentId": 2,
+        "approverUserId": 9,
+        "decision": "APROBADA",
+        "decidedById": 9,
+        "decidedAt": "2026-06-25T00:00:00.000Z",
+        "comment": "Confirmación aprobada",
+        "isCurrent": false,
+        "approverPosition": {
+          "id": 2,
+          "code": "DPC-TH-0003",
+          "name": "Jefe de Talento Humano"
+        },
+        "approverUser": {
+          "id": 9,
+          "name": "Jefe Talento Humano",
+          "email": "jefe.th@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        },
+        "decidedBy": {
+          "id": 9,
+          "name": "Jefe Talento Humano",
+          "email": "jefe.th@gmail.com",
+          "role": "USER",
+          "signatureUrl": "/uploads/signatures/signature-1780612884092.png"
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Respuesta si la confirmación no es válida
+
+```json
+{
+  "message": "La confirmación de contratación no es válida"
+}
+```
+
+---
+
+## Respuesta si no se envía la decisión
+
+```json
+{
+  "message": "La decisión es obligatoria"
+}
+```
+
+---
+
+## Respuesta si la decisión no es válida
+
+```json
+{
+  "message": "Decisión no válida",
+  "allowedDecisions": [
+    "APROBADA",
+    "RECHAZADA",
+    "CANCELADA"
+  ]
+}
+```
+
+---
+
+## Respuesta si se rechaza o cancela sin comentario
+
+```json
+{
+  "message": "Debe ingresar un comentario para rechazar o cancelar"
+}
+```
+
+---
+
+## Respuesta si la confirmación no existe
+
+```json
+{
+  "message": "La confirmación de contratación no existe"
+}
+```
+
+---
+
+## Respuesta si no hay aprobación pendiente
+
+```json
+{
+  "message": "No hay una aprobación pendiente para esta confirmación"
+}
+```
+
+---
+
+## Respuesta si la confirmación no tiene paso activo
+
+```json
+{
+  "message": "La confirmación no tiene un paso activo para decidir"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene permisos para decidir
+
+```json
+{
+  "message": "No tienes permisos para decidir esta confirmación de contratación"
+}
+```
+
+---
+
+## Respuesta si el usuario que toma la decisión no existe
+
+```json
+{
+  "message": "El usuario que toma la decisión no existe"
+}
+```
+
+---
+
+## Respuesta si el usuario no tiene firma registrada
+
+```json
+{
+  "message": "Debes tener una firma registrada para aprobar, rechazar o cancelar la confirmación de contratación"
+}
+```
+
+---
+
+## Respuesta si el siguiente paso no tiene usuario aprobador
+
+```json
+{
+  "message": "El siguiente paso no tiene un usuario aprobador asignado"
+}
+```
+
+---
+
+## Respuesta si el usuario no está autenticado
+
+```json
+{
+  "message": "Usuario no autenticado"
+}
+```
+
+---
+
+## Respuesta token inválido
+
+```json
+{
+  "message": "Token inválido o expirado."
+}
+```
+
+---
+
+## Respuesta en caso de error
+
+```json
+{
+  "message": "Error al registrar la decisión de Talento Humano"
+}
+```
+
+---
+
 # Resumen actualizado de endpoints funcionales
 
-| Método | Endpoint                            | Descripción                                                | Acceso               |
-| ------ | ----------------------------------- | ---------------------------------------------------------- | -------------------- |
-| GET    | /api/health                         | Verifica el funcionamiento de la API                       | Público              |
-| GET    | /api/users                          | Obtiene todos los usuarios registrados                     | ADMIN                |
-| POST   | /api/auth/register                  | Registra un nuevo usuario                                  | Público              |
-| POST   | /api/auth/register/bulk             | Registra usuarios mediante carga masiva desde Excel        | ADMIN                |
-| POST   | /api/auth/login                     | Inicia sesión y genera token JWT                           | Público              |
-| GET    | /api/profile                        | Obtiene el perfil del usuario autenticado                  | Usuario autenticado  |
-| POST   | /api/pqrs                           | Crea una nueva PQR                                         | USER / ADMIN         |
-| GET    | /api/pqrs/my                        | Obtiene las PQR del usuario autenticado                    | USER / ADMIN         |
-| GET    | /api/pqrs                           | Obtiene todas las PQR del sistema                          | ADMIN                |
-| GET    | /api/pqrs/available                 | Obtiene las PQR pendientes sin responsable                 | ADMIN / AGENT        |
-| GET    | /api/pqrs/assigned/my               | Obtiene las PQR asignadas al AGENT autenticado             | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/take                  | Permite que un AGENT tome una PQR disponible               | ADMIN / AGENT        |
-| PATCH  | /api/pqrs/:id/status                | Cambia el estado de una PQR                                | ADMIN / AGENT        |
-| PATCH  | /api/users/:id/role                 | Cambia el rol de un usuario                                | ADMIN                |
-| PATCH  | /api/pqrs/:id/priority              | Cambia la prioridad de una PQR                             | ADMIN / AGENT        |
-| GET    | /api/pqrs/:id/messages              | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/messages/read         | Marca como leído el chat de una PQR                        | USER / AGENT         |
-| PATCH  | /api/pqrs/:id/rate                  | Permite calificar una PQR cerrada                          | USER                 |
-| GET    | /api/notifications                  | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT |
-| GET    | /api/notifications/unread-count     | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/:id/read         | Marca una notificación como leída                          | USER / ADMIN / AGENT |
-| PATCH  | /api/notifications/read-all         | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT |
-| POST   | /api/pqrs/:id/messages/attachment   | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN |
-| PATCH  | /api/pqrs/:id/assign                | Asigna o reasigna una PQR a un agente específico           | ADMIN                |
-| PATCH  | /api/pqrs/:id/unassign              | Desasigna una PQR y la deja nuevamente disponible          | ADMIN                |
-| GET    | /api/users/agents                   | Obtiene únicamente los usuarios con rol AGENT              | ADMIN                |
-| GET    | /api/common/cities                  | Obtiene las ciudades activas del sistema                   | USER / ADMIN / AGENT |
-| GET    | /api/human-talent/departments       | Obtiene las áreas activas para requisición de personal     | USER / ADMIN / AGENT |
-| GET    | /api/human-talent/position-profiles | Obtiene los perfiles de cargo activos                      | USER / ADMIN / AGENT |
-| GET    | /api/human-talent/requisitions      | Obtiene las requisiciones de personal registradas          | USER / ADMIN / AGENT |
-| POST   | /api/human-talent/requisitions      | Crea una nueva requisición de personal                     | USER / ADMIN / AGENT |
+| Método | Endpoint                                               | Descripción                                                | Acceso                     |
+| ------ | ------------------------------------------------------ | ---------------------------------------------------------- | -------------------------- |
+| GET    | /api/health                                            | Verifica el funcionamiento de la API                       | Público                    |
+| GET    | /api/users                                             | Obtiene todos los usuarios registrados                     | ADMIN                      |
+| GET    | /api/users/agents                                      | Obtiene únicamente los usuarios con rol AGENT              | ADMIN                      |
+| PATCH  | /api/users/:id/role                                    | Cambia el rol de un usuario                                | ADMIN                      |
+| PATCH  | /api/users/signature                                   | Sube la firma del usuario autenticado                      | Usuario autenticado        |
+| POST   | /api/auth/register                                     | Registra un nuevo usuario                                  | Público                    |
+| POST   | /api/auth/register/bulk                                | Registra usuarios mediante carga masiva desde Excel        | ADMIN                      |
+| POST   | /api/users/login                                       | Inicia sesión y genera token JWT                           | Público                    |
+| GET    | /api/profile                                           | Obtiene el perfil del usuario autenticado                  | Usuario autenticado        |
+| GET    | /api/common/cities                                     | Obtiene las ciudades activas del sistema                   | Usuario autenticado        |
+| POST   | /api/pqrs                                              | Crea una nueva PQR                                         | USER / ADMIN               |
+| GET    | /api/pqrs/my                                           | Obtiene las PQR del usuario autenticado                    | USER / ADMIN               |
+| GET    | /api/pqrs                                              | Obtiene todas las PQR del sistema                          | ADMIN                      |
+| GET    | /api/pqrs/available                                    | Obtiene las PQR pendientes sin responsable                 | ADMIN / AGENT              |
+| GET    | /api/pqrs/assigned/my                                  | Obtiene las PQR asignadas al AGENT autenticado             | ADMIN / AGENT              |
+| PATCH  | /api/pqrs/:id/take                                     | Permite que un AGENT tome una PQR disponible               | ADMIN / AGENT              |
+| PATCH  | /api/pqrs/:id/assign                                   | Asigna o reasigna una PQR a un agente específico           | ADMIN                      |
+| PATCH  | /api/pqrs/:id/unassign                                 | Desasigna una PQR y la deja nuevamente disponible          | ADMIN                      |
+| PATCH  | /api/pqrs/:id/status                                   | Cambia el estado de una PQR                                | ADMIN / AGENT              |
+| PATCH  | /api/pqrs/:id/priority                                 | Cambia la prioridad de una PQR                             | ADMIN / AGENT              |
+| GET    | /api/pqrs/:id/messages                                 | Obtiene el historial de mensajes de una PQR                | USER / AGENT / ADMIN       |
+| PATCH  | /api/pqrs/:id/messages/read                            | Marca como leído el chat de una PQR                        | USER / AGENT / ADMIN       |
+| POST   | /api/pqrs/:id/messages/attachment                      | Envía un mensaje con imagen o documento adjunto en una PQR | USER / AGENT / ADMIN       |
+| PATCH  | /api/pqrs/:id/rate                                     | Permite calificar una PQR cerrada                          | USER                       |
+| GET    | /api/notifications                                     | Obtiene las notificaciones del usuario autenticado         | USER / ADMIN / AGENT       |
+| GET    | /api/notifications/unread-count                        | Obtiene la cantidad de notificaciones no leídas            | USER / ADMIN / AGENT       |
+| PATCH  | /api/notifications/:id/read                            | Marca una notificación como leída                          | USER / ADMIN / AGENT       |
+| PATCH  | /api/notifications/read-all                            | Marca todas las notificaciones como leídas                 | USER / ADMIN / AGENT       |
+| GET    | /api/human-talent/departments                          | Obtiene áreas disponibles según cargos activos del usuario | Usuario autenticado        |
+| GET    | /api/human-talent/position-profiles                    | Obtiene cargos disponibles según área seleccionada         | Usuario autenticado        |
+| POST   | /api/human-talent/requisitions                         | Crea una requisición de personal                           | Cargo autorizado           |
+| GET    | /api/human-talent/requisitions                         | Obtiene las requisiciones visibles para el usuario         | Usuario relacionado        |
+| GET    | /api/human-talent/requisitions/:id                     | Obtiene el detalle completo de una requisición             | Usuario relacionado        |
+| PATCH  | /api/human-talent/requisitions/:id/decision            | Aprueba, rechaza o cancela una requisición                 | Aprobador actual           |
+| POST   | /api/human-talent/requisitions/:id/hiring-confirmation | Crea la confirmación final de contratación                 | Analista de Talento Humano |
+| PATCH  | /api/human-talent/hiring-confirmations/:id/decision    | Aprueba, rechaza o cancela la confirmación de contratación | Aprobador actual TH        |
 
 ---
 
@@ -3933,7 +5743,10 @@ AGENT
 
 # Eventos que generan notificaciones
 
+## Notificaciones del módulo PQR
+
 | Acción                          | Quién ejecuta | Quién recibe                          | Tipo de notificación          |
+| ------------------------------- | ------------- | ------------------------------------- | ----------------------------- |
 | Crear una PQR                   | USER          | ADMIN y AGENT                         | NEW_PQR                       |
 | Tomar una PQR                   | AGENT         | ADMIN y USER dueño de la PQR          | PQR_TAKEN                     |
 | Cerrar una PQR                  | ADMIN o AGENT | USER dueño de la PQR                  | PQR_CLOSED                    |
@@ -3941,3 +5754,19 @@ AGENT
 | Asignar una PQR por primera vez | ADMIN         | AGENT asignado y USER dueño de la PQR | PQR_ASSIGNED / PQR_TAKEN      |
 | Reasignar una PQR               | ADMIN         | Nuevo AGENT y AGENT anterior          | PQR_ASSIGNED / PQR_UNASSIGNED |
 | Desasignar una PQR              | ADMIN         | AGENT retirado                        | PQR_UNASSIGNED                |
+
+---
+
+## Notificaciones del módulo Talento Humano
+
+| Acción                             | Quién ejecuta                | Quién recibe                   | Tipo de notificación         |
+| ---------------------------------- | ---------------------------- | ------------------------------ | ---------------------------- |
+| Crear requisición                  | Usuario con cargo autorizado | Primer aprobador               | REQUISITION_PENDING_APPROVAL |
+| Aprobar paso de requisición        | Aprobador actual             | Siguiente aprobador            | REQUISITION_PENDING_APPROVAL |
+| Finalizar aprobación jerárquica    | Último aprobador             | Analista de Talento Humano     | HIRING_CONFIRMATION_PENDING  |
+| Rechazar o cancelar requisición    | Aprobador actual             | Usuario creador                | REQUISITION_REJECTED         |
+| Crear confirmación de contratación | Analista de Talento Humano   | Jefe de Talento Humano         | HIRING_CONFIRMATION_PENDING  |
+| Aprobar confirmación               | Jefe de Talento Humano       | Usuario creador o involucrados | HIRING_CONFIRMATION_APPROVED |
+| Rechazar o cancelar confirmación   | Aprobador actual TH          | Usuario creador o involucrados | HIRING_CONFIRMATION_REJECTED |
+
+---

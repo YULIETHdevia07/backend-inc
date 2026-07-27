@@ -89,6 +89,12 @@ export const createPersonnelHiringConfirmationService = async ({
             throw new Error("El usuario que confirma la contratación no existe");
         }
 
+        if (!user.signatureUrl?.trim()) {
+            throw new Error(
+                "Debes tener una firma registrada para crear la confirmación de contratación"
+            );
+        }
+
         if (contractType === "DIRECTO" && !directContractType) {
             throw new Error("Debe seleccionar el tipo de contrato directo");
         }
@@ -365,7 +371,7 @@ export const decidePersonnelHiringConfirmationService = async ({
             hiringConfirmation.status === "CANCELADA"
         ) {
             throw new Error(
-                "Esta confirmación de contratación ya tiene un estado final"
+                "No hay una aprobación pendiente para esta confirmación"
             );
         }
 
@@ -386,11 +392,11 @@ export const decidePersonnelHiringConfirmationService = async ({
             throw new Error("El usuario que toma la decisión no existe");
         }
 
-        // if (!user.signatureUrl) {
-        //     throw new Error(
-        //         "Debes tener una firma registrada para aprobar, rechazar o cancelar la confirmación de contratación"
-        //     );
-        // }
+        if (!user.signatureUrl) {
+            throw new Error(
+                "Debes tener una firma registrada para aprobar, rechazar o cancelar la confirmación de contratación"
+            );
+        }
 
         const currentApproval = hiringConfirmation.approvals.find(
             (approval) => approval.isCurrent

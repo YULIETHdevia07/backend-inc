@@ -65,25 +65,46 @@ src/
 │   └── socket.ts
 │
 ├── controllers/
+|   |
 │   ├── auth
 │   |   └── auth.controller.ts
+|   |
+│   ├── common
+│   |   └── city.controller.ts
+|   |
+│   ├── humanTalent
+|   |   ├── department.controller.ts
+|   |   ├── personnelHiringConfirmation.controller.ts
+|   |   ├── personnelRequisition.controller.ts
+│   |   └── positionProfile.controller.ts
+|   |
 │   ├── notifications
 │   |   └── notification.controller.ts
+|   |
 │   ├── pqrs
 |   |   ├── pqr.controller.ts
 │   |   └── pqrMessage.controller.ts
+|   |
 │   └── users
 │       ├── profile.controller.ts
-|       └─ user.controller.ts
+│       └── user.controller.ts
 |
 ├── interfaces/
+|   |
 │   ├── auth
 │   |   └── auth.interface.ts
+|   |
+│   ├── humanTalent
+|   |   ├── personnelHiringConfirmation.interface.ts
+│   |   └── personnelRequisition.interface.ts
+|   |
 │   ├── notifications
 │   |   └── notification.interface.ts
+|   |
 │   ├── pqrs
 |   |   ├── pqr.interface.ts
 │   |   └── pqrMessage.interface.ts
+|   |
 │   └── sockets
 |       └─ socket.interface.ts
 │
@@ -91,30 +112,53 @@ src/
 │   ├── auth.middleware.ts
 │   ├── role.middleware.ts
 │   ├── socketAuth.middleware.ts
-│   └── upload.middleware.ts
+│   ├── upload.middleware.ts
+│   └── uploadUserSignature.middleware.ts
 │
 ├── routes/
 │   ├── auth
 │   |   └── auth.routes.ts
+|   |
+│   ├── common
+│   |   └── city.routes.ts
+|   |
+│   ├── humanTalent
+|   |   ├── department.routes.ts
+|   |   ├── personnelHiringConfirmation.routes.ts
+|   |   ├── personnelRequisition.routes.ts
+│   |   └── positionProfile.routes.ts
+|   |
 │   ├── notifications
 │   |   └── notification.routes.ts
+|   |
 │   ├── pqrs
 |   |   ├── pqr.routes.ts
 │   |   └── pqrMessage.routes.ts
+|   |
 │   ├── users
 |   |   ├── profile.routes.ts
 |   |   └── user.routes.ts
+|   |
 │   └── index.ts
 │
 ├── services/
+|   |
 │   ├── auth
 │   |   └── auth.service.ts
+|   |
+│   ├── common
+│   |   └── city.service.ts
+|   |
 │   ├── notifications
-│   |   └── notification.service.ts
+|   |   ├── humanTalentNotification.service.ts
+|   |   ├── notification.service.ts
+│   |   └── pqrNotification.service.ts
+|   |
 │   ├── pqrs
 |   |   ├── pqr.service.ts
 |   |   ├── pqrAttachment.service.ts
 │   |   └── pqrMessage.service.ts
+|   |
 │   └── users
 |       └─ user.service.ts
 │
@@ -124,6 +168,13 @@ src/
 │   └── pqr.socket.ts
 │
 └── Utils/
+    |
+    |── humanTalent/
+    |   |── departmentHierarchy.helper.ts
+    |   |── hiringConfirmationApprovalFlow.helper.ts
+    |   |── requisitionApprovalFlow.helper.ts
+    |   └── requisitionCreator.helper.ts
+    |
     └── validators.ts
 ```
 
